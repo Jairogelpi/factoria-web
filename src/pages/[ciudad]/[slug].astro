@@ -1,55 +1,56 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import { createClient } from '@supabase/supabase-js';
 
-// getStaticPaths: genera todas las URLs en build
-export async function getStaticPaths() {
-  const modules = import.meta.glob("/src/content/businesses/*.json", { eager: true });
+// 1. Configuración del Cliente Supabase (Usando vars de entorno)
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  function parseBusiness(mod: any) {
-    return (mod?.default ?? mod);
-  }
+const { slug } = Astro.params;
 
-  const allBusinesses = Object.values(modules).map(parseBusiness).sort((a: any, b: any) => {
-    return a.slug.localeCompare(b.slug);
-  });
+// --- OBSERVABILIDAD (Start) ---
+// Medimos cuánto tarda Supabase en responder para asegurar que no daña el SEO
+const startMetric = performance.now();
+let metricStatus = 'success';
+// -----------------------------
 
-  console.log("Businesses found:", allBusinesses.length);
-  return allBusinesses.map((b: any) => ({
-    params: { ciudad: b.ciudad, slug: b.slug },
-    props: { business: b },
-  }));
+// 2. Consulta a la Fuente de la Verdad
+const { data, error } = await supabase
+  .from('sites_factory')
+  .select('seo_bundle')
+  .eq('business_slug', slug)
+  .single();
+
+// --- OBSERVABILIDAD (End) ---
+const endMetric = performance.now();
+const duration = (endMetric - startMetric).toFixed(2);
+
+if (error || !data) {
+    metricStatus = 'error_not_found';
+    console.error(`[OBSERVABILITY] ❌ Error fetching ${slug}: ${error?.message}`);
+    return Astro.redirect('/404');
 }
 
-const { business } = Astro.props;
+console.log(`[OBSERVABILITY] ⏱️ Renderizado SSR para: ${slug} | DB Latency: ${duration}ms | Status: ${metricStatus}`);
+// -----------------------------
 
-const seo = business.seo || {};
-const schema_jsonld = business.schema_jsonld || [];
+// 3. Extraer el Bundle para usar en el HTML
+const bundle = data.seo_bundle;
+const { content, meta } = bundle;
+
+// 4. Cache-Control para SEO (Importante)
+// Le decimos al navegador/Google que guarde esta versión 60 segundos.
+// Esto hace que la web vuele si entra mucha gente seguida.
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
 ---
 
-<Layout seo={seo} schema_jsonld={schema_jsonld}>
-  <main>
-    <h1>{seo.h1 || business.nombre_negocio}</h1>
-    <p>{business.content?.descripcion_corta}</p>
-
-    {business.content?.lista_servicios && (
-      <section>
-        <h2>Servicios</h2>
-        <p>{business.content.lista_servicios}</p>
-      </section>
-    )}
-
-    {Array.isArray(business.content?.faq) && business.content.faq.length > 0 && (
-      <section>
-        <h2>Preguntas frecuentes</h2>
-        <ul>
-          {business.content.faq.map((x: any) => (
-            <li>
-              <strong>{x.q}</strong><br />
-              <span>{x.a}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
-  </main>
-</Layout>
+<html lang="es">
+  <head>
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.description} />
+    </head>
+  <body>
+    <h1>{content.h1}</h1>
+    <p>{content.about_text}</p>
+    </body>
+</html>
