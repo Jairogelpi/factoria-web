@@ -5,6 +5,8 @@ import sitemap from "@astrojs/sitemap";
 export default defineConfig({
     output: "static",
     adapter: cloudflare(),
-    site: import.meta.env.PUBLIC_BASE_URL, // o ponlo fijo si prefieres
+    site: import.meta.env.PUBLIC_BASE_URL || "https://example.com",
     integrations: [sitemap()],
+
+
 });

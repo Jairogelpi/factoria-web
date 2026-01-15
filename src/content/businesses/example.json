@@ -1,0 +1,22 @@
+{
+    "ciudad": "madrid",
+    "slug": "peluqueria-test",
+    "nombre_negocio": "Peluquería Test",
+    "seo": {
+        "meta_title": "Peluquería Test en Madrid",
+        "meta_description": "La mejor peluquería de prueba.",
+        "canonical_path": "madrid/peluqueria-test",
+        "og_image": "/images/test.jpg"
+    },
+    "content": {
+        "descripcion_corta": "Esto es una prueba.",
+        "lista_servicios": "Corte, Tinte",
+        "faq": [
+            {
+                "q": "¿Es una prueba?",
+                "a": "Sí."
+            }
+        ]
+    },
+    "schema_jsonld": []
+}

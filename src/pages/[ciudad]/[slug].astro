@@ -1,16 +1,19 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 
-const modules = import.meta.glob("../../content/businesses/*.json", { eager: true });
-
-function parseBusiness(mod: any) {
-  return (mod?.default ?? mod);
-}
-
-const allBusinesses = Object.values(modules).map(parseBusiness);
-
 // getStaticPaths: genera todas las URLs en build
 export async function getStaticPaths() {
+  const modules = import.meta.glob("/src/content/businesses/*.json", { eager: true });
+
+  function parseBusiness(mod: any) {
+    return (mod?.default ?? mod);
+  }
+
+  const allBusinesses = Object.values(modules).map(parseBusiness).sort((a: any, b: any) => {
+    return a.slug.localeCompare(b.slug);
+  });
+
+  console.log("Businesses found:", allBusinesses.length);
   return allBusinesses.map((b: any) => ({
     params: { ciudad: b.ciudad, slug: b.slug },
     props: { business: b },

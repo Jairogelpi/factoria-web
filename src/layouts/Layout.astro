@@ -39,7 +39,7 @@ const ogImage = seo?.og_image
 
     {schema_jsonld?.length > 0 && (
       <script type="application/ld+json">
-        {JSON.stringify(schema_jsonld)}
+        {JSON.stringify(schema_jsonld, null, 0)}
       </script>
     )}
   </head>
