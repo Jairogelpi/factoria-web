@@ -1,0 +1,52 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const modules = import.meta.glob("../../content/businesses/*.json", { eager: true });
+
+function parseBusiness(mod: any) {
+  return (mod?.default ?? mod);
+}
+
+const allBusinesses = Object.values(modules).map(parseBusiness);
+
+// getStaticPaths: genera todas las URLs en build
+export async function getStaticPaths() {
+  return allBusinesses.map((b: any) => ({
+    params: { ciudad: b.ciudad, slug: b.slug },
+    props: { business: b },
+  }));
+}
+
+const { business } = Astro.props;
+
+const seo = business.seo || {};
+const schema_jsonld = business.schema_jsonld || [];
+---
+
+<Layout seo={seo} schema_jsonld={schema_jsonld}>
+  <main>
+    <h1>{seo.h1 || business.nombre_negocio}</h1>
+    <p>{business.content?.descripcion_corta}</p>
+
+    {business.content?.lista_servicios && (
+      <section>
+        <h2>Servicios</h2>
+        <p>{business.content.lista_servicios}</p>
+      </section>
+    )}
+
+    {Array.isArray(business.content?.faq) && business.content.faq.length > 0 && (
+      <section>
+        <h2>Preguntas frecuentes</h2>
+        <ul>
+          {business.content.faq.map((x: any) => (
+            <li>
+              <strong>{x.q}</strong><br />
+              <span>{x.a}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </main>
+</Layout>

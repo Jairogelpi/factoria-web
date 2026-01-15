@@ -1,22 +1,49 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+---
+type Seo = {
+  meta_title?: string;
+  meta_description?: string;
+  canonical_path?: string; // "caceres/cozy-hair-salon"
+  og_image?: string;       // URL absoluta o path
+};
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+const { seo, schema_jsonld = [] } = Astro.props;
+
+const base = import.meta.env.PUBLIC_BASE_URL || "https://example.com";
+const canonicalPath = (seo?.canonical_path || "").replace(/^\//, "");
+const canonicalUrl = canonicalPath
+  ? `${base.replace(/\/$/, "")}/${canonicalPath}`
+  : base;
+
+const title = seo?.meta_title || "";
+const description = seo?.meta_description || "";
+
+const ogImage = seo?.og_image
+  ? (seo.og_image.startsWith("http") ? seo.og_image : `${base.replace(/\/$/, "")}/${seo.og_image.replace(/^\//, "")}`)
+  : "";
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    {title && <title>{title}</title>}
+    {description && <meta name="description" content={description} />}
+
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content="website" />
+    {title && <meta property="og:title" content={title} />}
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={canonicalUrl} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    {schema_jsonld?.length > 0 && (
+      <script type="application/ld+json">
+        {JSON.stringify(schema_jsonld)}
+      </script>
+    )}
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
