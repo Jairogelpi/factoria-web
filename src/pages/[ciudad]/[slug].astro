@@ -67,8 +67,27 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
         <h1>{bundle.perfil.nombre_comercial}</h1>
         <p>{bundle.perfil.descripcion_corta}</p>
         
-        {bundle.contacto.reserva_url && (
-           <a href={bundle.contacto.reserva_url} class="btn-cta">Reservar / Pedir</a>
+        {/* Voice Search Snippet: Optimización para búsquedas por voz */}
+        {bundle.marketing?.voice_search_snippet && (
+          <p class="voice-snippet">{bundle.marketing.voice_search_snippet}</p>
+        )}
+
+        {/* CTA "God Mode" con Microcopy */}
+        {(bundle.marketing?.estrategia_conversion?.cta_principal?.url || bundle.contacto.reserva_url) && (
+            <div class="cta-container">
+              <a 
+                href={bundle.marketing?.estrategia_conversion?.cta_principal?.url || bundle.contacto.reserva_url} 
+                class="btn-primary"
+              >
+                {bundle.marketing?.estrategia_conversion?.cta_principal?.texto || "Reservar / Pedir"}
+              </a>
+              
+              {(bundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Compra segura 🔒") && (
+                  <span class="microcopy-seguridad">
+                    🔒 {bundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Garantía de Satisfacción"}
+                  </span>
+              )}
+            </div>
         )}
       </div>
     </header>
@@ -79,7 +98,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
       
       <h3>Nuestra Oferta</h3>
       <ul>
-        {(bundle.contenido_seo.lista_servicios || []).map((item) => (
+        {(bundle.contenido_seo.lista_servicios || []).map((item: string) => (
           <li>{item}</li>
         ))}
       </ul>
@@ -127,17 +146,51 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
     margin-bottom: 1rem;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
   }
+  
+  /* Voice Snippet: Visible pero sutil, ideal para "Featured Snippets" */
+  .voice-snippet {
+    font-size: 1.1rem;
+    font-style: italic;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-  /* Basic styling for other elements to look decent */
-  .btn-cta {
+  /* CTA Container God Mode */
+  .cta-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn-primary {
     display: inline-block;
     background: #ff4757;
     color: white;
-    padding: 10px 20px;
+    padding: 12px 24px;
     text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-    margin-top: 1rem;
+    border-radius: 50px; /* Rounded modern style */
+    font-weight: 800;
+    font-size: 1.2rem;
+    transition: transform 0.2s, background 0.2s;
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+  }
+  
+  .btn-primary:hover {
+    background: #ff6b81;
+    transform: translateY(-2px);
+  }
+
+  .microcopy-seguridad {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
   }
 
   .badge {
@@ -151,6 +204,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
   }
 
   main {
-    font-family: system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif; /* Modern font stack */
   }
 </style>
