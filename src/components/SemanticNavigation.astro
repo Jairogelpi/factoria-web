@@ -1,0 +1,85 @@
+---
+import type { ClientSEOBundle } from '../types/ClientBundle';
+
+interface Props {
+  bundle: ClientSEOBundle;
+  ciudad: string;
+}
+
+const { bundle, ciudad } = Astro.props;
+const { internal_links = [], semantic_entities = [], services = [] } = bundle.content;
+
+// --- OBSERVABILIDAD PERMANENTE ---
+const linkCount = internal_links.length;
+const entityCount = (semantic_entities || []).length;
+console.log(`[OBSERVABILITY] 🧠 Cluster Semántico para ${bundle.ops.clientId}: ${linkCount} enlaces internos, ${entityCount} entidades.`);
+---
+
+<section class="semantic-nav" aria-labelledby="semantic-title">
+  <h2 id="semantic-title">Explora más sobre {bundle.brand.name}</h2>
+  
+  {linkCount > 0 && (
+    <div class="internal-cluster">
+      <h3>Servicios Relacionados</h3>
+      <nav>
+        <ul>
+          {internal_links.map(link => {
+            const targetService = services.find(s => s.slug === link.toServiceId);
+            return (
+              <li>
+                <a href={`/${ciudad}/${bundle.ops.clientId}#${link.toServiceId}`} title={link.reason}>
+                  <strong>{link.anchor}</strong>: {link.reason}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
+  )}
+
+  {entityCount > 0 && (
+    <div class="authority-entities">
+      <h3>Contexto y Autoridad</h3>
+      <div class="entities-tags">
+        {(semantic_entities || []).map(url => {
+          const name = url.split('/').pop()?.replace(/_/g, ' ') || 'Concepto';
+          return (
+            <a href={url} target="_blank" rel="noopener noreferrer nofollow" class="entity-tag">
+              {name}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  )}
+</section>
+
+<style>
+  .semantic-nav {
+    margin-top: 4rem;
+    padding: 2rem;
+    background: #f9f9f9;
+    border-top: 2px solid #eee;
+  }
+  .internal-cluster ul {
+    list-style: none;
+    padding: 0;
+  }
+  .internal-cluster li {
+    margin-bottom: 1rem;
+  }
+  .entities-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .entity-tag {
+    background: #e2e8f0;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: #475569;
+  }
+</style>

@@ -1,9 +1,44 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { getClientBundle } from '../../lib/db/queries';
-import { generateSchemaGraph } from '../../lib/seo/schema';
+import Reviews from '../../components/Reviews.astro';
+import { Image } from 'astro:assets';
+import SemanticNavigation from '../../components/SemanticNavigation.astro';
 
 const { slug } = Astro.params;
+const { ciudad } = Astro.params; // Capturamos la ciudad de la URL
+// ... (rest of imports)
+
+// ... (inside main tag, maybe after gallery or before FAQs?)
+// Let's put it after "Sobre Nosotros" and "Nuestra Oferta", before Gallery.
+// Actually, user didn't specify position, but Social Proof usually goes after Hero or Services.
+// Looking at the file, line 118 is Gallery.
+// Let's place it after Gallery for now, or maybe before FAQs.
+// "Opiniones de nuestros clientes"
+
+// Wait, I need to see where to insert.
+// I'll insert it after the Gallery section.
+
+    {/* Galería de Imágenes */}
+    {(bundle.media.gallery || []).length > 0 && (
+        <div class="gallery-grid">
+          {(bundle.media.gallery || []).map((img, index) => (
+             <img 
+               src={img.src} 
+               alt={img.alt}
+               loading="lazy"
+               class="gallery-img"
+               width="400" height="300"
+             />
+          ))}
+        </div>
+    )}
+
+    {/* Reseñas Dinámicas (Google Places) */}
+    {location?.gbp?.placeId && (
+        <section class="reviews-wrapper">
+            <h3>Lo que dicen nuestros clientes</h3>
+            <Reviews placeId={location.gbp.placeId} />
+        </section>
+    )}
 
 // 1. OBTENCIÓN UNIFICADA
 // Incluye validación, métricas, latencia y Build Gates
@@ -30,11 +65,8 @@ console.log(`[OBSERVABILITY] 💎 SEO Divino: ${slug} | Autoridad: ${authoritySc
 
 const location = safeBundle.locations[0]; // Sede principal
 
-// --- OBSERVABILIDAD (Authority) ---
-const authorityScore = safeBundle.brand?.sameAs?.length || 0;
-console.log(`[OBSERVABILITY] 💎 SEO Divino: ${slug} | Autoridad: ${authorityScore} fuentes | Categoría: ${safeBundle.content?.semantic_hierarchy?.category_name || 'N/A'}`);
-
-const location = safeBundle.locations[0]; // Sede principal
+// 4. Configuración Ops
+const ops = safeBundle.ops || { rum: { enabled: true } };
 
 // 4. Configuración Ops
 const ops = safeBundle.ops || { rum: { enabled: true } };
@@ -48,41 +80,32 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
       <ol>
          <li><a href="/">Inicio</a></li>
          <li aria-hidden="true">&rsaquo;</li>
-         <li><a href={`/${location?.address?.city || 'caceres'}`}>{location?.address?.city || 'Ciudad'}</a></li>
+         <li><a href={`/${location?.address?.locality || 'localidad'}`}>{location?.address?.locality || 'Ciudad'}</a></li>
          <li aria-hidden="true">&rsaquo;</li>
          <li><span aria-current="page">{safeBundle.brand?.name || 'Negocio'}</span></li>
       </ol>
     </nav>
 
     <header class="hero-section">
-      <img 
-        src={safeBundle.multimedia?.hero_image_url || safeBundle.multimedia?.hero} 
-        alt={safeBundle.multimedia?.hero_image_alt_seo || `Foto principal de ${safeBundle.perfil?.nombre_comercial || safeBundle.content?.h1}`}
-        class="hero-bg"
+      <Image 
+        src={safeBundle.media?.hero?.url || safeBundle.multimedia?.hero} 
+        alt={safeBundle.media?.hero?.alt || safeBundle.multimedia?.hero_image_alt_seo || `Foto principal de ${safeBundle.brand?.name}`}
+        width={1200}
+        height={600}
+        format="avif"
+        loading="eager"
         fetchpriority="high"
-        width="1200" height="600" 
+        class="hero-bg"
       />
       
       <div class="hero-content">
-        {/* H1: Soporte para estructura v2 (marketing) y v1 (content.h1) */}
-        <h1>{safeBundle.marketing?.hero_copy?.h1_seo || safeBundle.content?.h1 || safeBundle.perfil?.nombre_comercial}</h1>
-        <p>{safeBundle.perfil?.descripcion_corta || safeBundle.content?.subtitle}</p>
+        <h1>{safeBundle.content?.home?.headline || safeBundle.content?.h1 || safeBundle.brand?.name}</h1>
+        <p>{safeBundle.content?.home?.subheadline || safeBundle.perfil?.descripcion_corta || safeBundle.content?.subtitle}</p>
         
-        {/* Voice Search Snippet */}
         {safeBundle.marketing?.voice_search_snippet && (
           <p class="voice-snippet">{safeBundle.marketing.voice_search_snippet}</p>
         )}
 
-        {/* Social Proof: Estrellas Visuales (Coinciden con Schema) */}
-        {(safeBundle.social_proof?.rating || safeBundle.content?.social?.rating) && (
-             <div class="rating-container">
-               <span class="stars">{'★'.repeat(Math.round(safeBundle.social_proof?.rating || safeBundle.content?.social?.rating || 5))}</span>
-               <span class="rating-text">
-                 {safeBundle.social_proof?.rating || safeBundle.content?.social?.rating}/5 
-                 ({safeBundle.social_proof?.reviews_count || safeBundle.content?.social?.reviews_count || '100+'} opiniones)
-               </span>
-             </div>
-        )}
 
         {/* CTA: Soporte híbrido v1/v2 */}
         {(safeBundle.marketing?.estrategia_conversion?.cta_principal?.url || safeBundle.contacto?.reserva_url || safeBundle.content?.cta_primary?.url) && (
@@ -90,6 +113,7 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
               <a 
                 href={safeBundle.marketing?.estrategia_conversion?.cta_principal?.url || safeBundle.contacto?.reserva_url || safeBundle.content?.cta_primary?.url} 
                 class="btn-primary"
+                aria-label={`Solicitar servicio en ${safeBundle.brand?.name} - ${safeBundle.marketing?.estrategia_conversion?.cta_principal?.texto || 'Contactar'}`}
               >
                 {safeBundle.marketing?.estrategia_conversion?.cta_principal?.texto || "Reservar / Pedir"}
               </a>
@@ -111,24 +135,34 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
       <h3>Nuestra Oferta</h3>
       <ul>
         {(bundle.content.services || []).map((item) => (
-          <li>{item.name}</li>
+          <li>
+            <strong>{item.name}</strong>
+            {bundle.content.semantic_definitions?.[item.slug] && (
+               <p class="ai-definition">{bundle.content.semantic_definitions[item.slug]}</p>
+            )}
+          </li>
         ))}
       </ul>
       
-      {/* Galería de Imágenes */}
+    {/* Galería de Imágenes */}
       {(bundle.media.gallery || []).length > 0 && (
         <div class="gallery-grid">
           {(bundle.media.gallery || []).map((img, index) => (
-             <img 
+             <Image 
                src={img.src} 
                alt={img.alt}
+               width={400} 
+               height={300}
+               format="avif"
                loading="lazy"
                class="gallery-img"
-               width="400" height="300"
              />
           ))}
         </div>
       )}
+
+      {/* Reseñas Dinámicas (Google Places) */}
+      {location?.gbp?.placeId && <Reviews placeId={location.gbp.placeId} />}
     </section>
 
     {/* Sección FAQs */}
@@ -144,6 +178,25 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
           ))}
         </dl>
       </section>
+    )}
+
+    {/* Navegación Semántica (Cluster de Autoridad) */}
+    {/* SECCIÓN SEMÁNTICA (Cluster de Autoridad) */}
+    <SemanticNavigation 
+      bundle={safeBundle} 
+      ciudad={ciudad || 'local'} 
+    />
+
+    {/* Footer Legal (Defensive Coding: No renderizar si no hay datos legales) */}
+    {safeBundle.legal && (
+      <footer class="site-footer">
+        <p>&copy; {new Date().getFullYear()} {safeBundle.brand.name}. {safeBundle.legal.companyName ? `Operado por ${safeBundle.legal.companyName}` : ''}</p>
+        <nav class="legal-nav">
+          <a href="/legal/aviso-legal">Aviso Legal</a>
+          <a href="/legal/privacidad">Política de Privacidad</a>
+          {safeBundle.legal.includeCookieBanner && <a href="#" onclick="javascript:openCookieSettings(); return false;">Cookies</a>}
+        </nav>
+      </footer>
     )}
 
   </main>
@@ -326,5 +379,38 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
   .hero-bg {
     /* Hardcoded hero aspect ratio fallback */
     aspect-ratio: 16/9; 
+  }
+  /* Footer Styles */
+  .site-footer {
+    margin-top: 4rem;
+    padding: 2rem;
+    background: #f1f2f6;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #747d8c;
+    border-top: 1px solid #dfe4ea;
+  }
+  .legal-nav {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  .legal-nav a {
+    color: #57606f;
+    text-decoration: none;
+  }
+  .legal-nav a:hover {
+    text-decoration: underline;
+  }
+  .ai-definition {
+    font-size: 0.9rem;
+    color: #2d3436;
+    background: #e1f5fe;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    margin-top: 0.3rem;
+    font-style: italic;
+    border-left: 3px solid #03a9f4;
   }
 </style>

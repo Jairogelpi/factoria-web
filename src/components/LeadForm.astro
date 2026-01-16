@@ -1,0 +1,51 @@
+---
+const { business_name, section } = Astro.props;
+---
+<form class="lead-form" aria-label={`Formulario de contacto para ${business_name} en la sección ${section}`}>
+  <input 
+    type="text" 
+    name="name" 
+    placeholder="Tu nombre" 
+    aria-label="Introduce tu nombre completo" 
+    required 
+  />
+  <input 
+    type="email" 
+    name="email" 
+    placeholder="Tu email" 
+    aria-label="Introduce tu correo electrónico de contacto" 
+    required 
+  />
+  <button type="submit" aria-label={`Enviar solicitud a ${business_name}`}>
+    Contactar ahora
+  </button>
+</form>
+
+<style>
+  .lead-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 400px;
+    margin: 2rem auto;
+  }
+  input {
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button:hover {
+    background: #0056b3;
+  }
+</style>

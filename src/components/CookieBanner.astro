@@ -1,0 +1,133 @@
+---
+interface Props {
+  includeBanner?: boolean;
+  businessSlug: string;
+  policyUrl?: string;
+}
+
+const { includeBanner, businessSlug, policyUrl = "#" } = Astro.props;
+
+// OBSERVABILIDAD (server): log de activación
+if (includeBanner) {
+  console.log(`[OBS] 🍪 CookieBanner activado para: ${businessSlug}`);
+}
+---
+
+{includeBanner && (
+  <div id="cookie-banner" class="cookie-banner hidden" data-slug={businessSlug}>
+    <div class="cookie-content">
+      <p>
+        Utilizamos cookies para mejorar tu experiencia y analizar el tráfico.
+        Consulta nuestra <a href={policyUrl}>Política de Cookies</a>.
+      </p>
+      <div class="cookie-actions">
+        <button type="button" id="accept-cookies" class="btn-accept">Aceptar todas</button>
+        <button type="button" id="decline-cookies" class="btn-decline">Rechazar</button>
+      </div>
+    </div>
+  </div>
+)}
+
+<script is:inline>
+  (function () {
+    const banner = document.getElementById('cookie-banner');
+    const slug = banner?.dataset?.slug;
+
+    if (!banner || !slug) return;
+
+    const key = `cookie-consent-${slug}`;
+    const consent = localStorage.getItem(key);
+
+    // Solo mostrar si no hay decisión previa
+    if (!consent) banner.classList.remove('hidden');
+
+    const sendMetric = async (name, value) => {
+      try {
+        await fetch('/api/metrics', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            type: 'event',
+            name,
+            value,
+            slug,
+            url: location.href,
+            user_agent: navigator.userAgent
+          })
+        });
+      } catch (e) {
+        // No romper UX por fallo de observabilidad
+      }
+    };
+
+    document.getElementById('accept-cookies')?.addEventListener('click', async () => {
+      localStorage.setItem(key, 'accepted');
+      banner.classList.add('hidden');
+      console.log(`[OBS-CLIENT] ✅ Cookies aceptadas en ${slug}`);
+      await sendMetric('cookie_accepted', 1);
+    });
+
+    document.getElementById('decline-cookies')?.addEventListener('click', async () => {
+      localStorage.setItem(key, 'declined');
+      banner.classList.add('hidden');
+      console.log(`[OBS-CLIENT] ❌ Cookies rechazadas en ${slug}`);
+      await sendMetric('cookie_declined', 1);
+    });
+  })();
+</script>
+
+<style>
+  .cookie-banner {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    right: 2rem;
+    background: #ffffff;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 1.25rem;
+    z-index: 9999;
+    border: 1px solid #eee;
+  }
+
+  .hidden { display: none; }
+
+  .cookie-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .cookie-content p { margin: 0; }
+
+  .cookie-actions { display: flex; gap: 0.75rem; }
+
+  .btn-accept {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .btn-decline {
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  @media (min-width: 768px) {
+    .cookie-content {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+</style>

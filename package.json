@@ -7,8 +7,13 @@
     "build": "npm run test:a11y && astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "test:seo": "playwright test tests/seo.spec.ts",
+    "test:schema": "playwright test tests/schema.spec.ts",
+    "test:consent": "playwright test tests/consent.spec.ts",
     "test:a11y": "playwright test tests/a11y.spec.ts",
-    "deploy:check": "npm run test:a11y && astro build"
+    "test:perf": "node tests/perf.lighthouse.cjs",
+    "gate": "node scripts/gate.mjs",
+    "deploy:check": "npm run gate"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.6",
@@ -21,6 +26,8 @@
     "@astrojs/cloudflare": "^12.6.12",
     "@astrojs/sitemap": "^3.7.0",
     "@axe-core/playwright": "^4.11.0",
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^12.8.2",
     "playwright": "^1.57.0"
   }
 }

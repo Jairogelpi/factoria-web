@@ -17,6 +17,22 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
         }
     }
 
+    // 4. Verificaciones Legales y de Consentimiento (2026)
+    const { legal } = bundle;
+    if (legal?.consentModeV2?.enabled) {
+        const { axeptio, gtm } = legal.consentModeV2;
+        if (legal.consentModeV2.cmp === 'axeptio' && (!axeptio?.projectId || !axeptio?.cookiesVersion)) {
+            const msg = `[RELEASE GATE] ❌ Error legal en "${bundle.ops?.clientId || 'unknown'}": Falta configuración de Axeptio.`;
+            console.error(msg);
+            if (env === 'prod') throw new Error(msg);
+        }
+        if (!gtm?.containerId) {
+            const msg = `[RELEASE GATE] ❌ Error legal en "${bundle.ops?.clientId || 'unknown'}": Falta Container ID de GTM.`;
+            console.error(msg);
+            if (env === 'prod') throw new Error(msg);
+        }
+    }
+
     if (missing.length > 0) {
         const clientId = bundle.ops?.clientId || 'unknown';
         const msg = `[BUILD GATE] ❌ Error en site '${clientId}': Faltan [${missing.join(", ")}]`;
@@ -24,5 +40,12 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
         if (env === "prod") throw new Error(msg);
     } else {
         console.log(`[OBSERVABILITY] ✅ Bundle validado para: ${bundle.brand.name}`);
+    }
+
+    // 5. Validación de densidad de respuestas SGE (Observabilidad Permanente)
+    if (!bundle.content.semantic_definitions || Object.keys(bundle.content.semantic_definitions).length === 0) {
+        console.warn(`[OBS-SEO] ⚠️ El bundle ${bundle.ops.clientId} no tiene semantic_definitions. Baja probabilidad de cita en SGE.`);
+    } else {
+        console.log(`[OBS-SEO] ✅ SGE-Ready: ${Object.keys(bundle.content.semantic_definitions).length} respuestas directas generadas.`);
     }
 }

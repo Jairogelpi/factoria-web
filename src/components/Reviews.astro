@@ -1,0 +1,41 @@
+---
+const { placeId } = Astro.props;
+---
+<div id="dynamic-reviews" data-placeid={placeId} class="reviews-wrapper">
+  <p class="loading-text">Consultando opiniones reales en Google...</p>
+</div>
+
+<script>
+  const container = document.getElementById('dynamic-reviews');
+  const placeId = container?.dataset.placeid;
+
+  const observer = new IntersectionObserver(async (entries) => {
+    if (entries[0].isIntersecting && placeId) {
+      try {
+        const response = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/get-reviews`, {
+          method: 'POST',
+          body: JSON.stringify({ placeId })
+        });
+        const data = await response.json();
+        renderReviews(data.reviews);
+        console.log(`[OBS-CLIENT] Reseñas cargadas para ${placeId}`);
+      } catch (e) {
+        console.error("[OBS-CLIENT] Error en reseñas dinámicas:", e);
+      }
+      observer.disconnect();
+    }
+  });
+
+  if (container) observer.observe(container);
+
+  function renderReviews(reviews: any[]) {
+    if (!container) return;
+    container.innerHTML = reviews.map(r => `
+      <div class="review-card">
+        <strong>${r.authorAttribution.displayName}</strong>
+        <div class="stars">${"★".repeat(r.rating)}</div>
+        <p>${r.text.text}</p>
+      </div>
+    `).join('');
+  }
+</script>

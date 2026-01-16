@@ -15,10 +15,12 @@ export default defineConfig({
         defaultStrategy: 'hover'
     },
 
-    // Configuración de imagen (si usas <Image /> de Astro)
+    // Configuración de imagen (High Performance 2026)
     image: {
+        domains: ['jxcwgneqbkyqrgyezbni.supabase.co'],
+        format: ['avif', 'webp'],
         service: {
-            entrypoint: 'astro/assets/services/noop' // En Cloudflare suele ser mejor passthrough
+            entrypoint: 'astro/assets/services/sharp'
         }
     }
 });

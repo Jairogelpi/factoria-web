@@ -1,22 +1,29 @@
 ---
 // Layout.astro
 import SEO from '../components/SEO.astro';
+import ConsentAndTags from '../components/ConsentAndTags.astro';
+import CookieBanner from '../components/CookieBanner.astro';
 import type { ClientSEOBundle } from '../types/ClientBundle';
 
 interface Props {
   bundle: ClientSEOBundle;
   ops?: { rum: { enabled: boolean } };
-  extra_meta?: any[]; // Keep for backward compatibility if needed, though SEO.astro handles most
+  extra_meta?: any[]; 
 }
 
 const { bundle, ops = { rum: { enabled: true } } } = Astro.props;
 
+// Derivar props para CookieBanner
+const slug = bundle?.ops?.clientId ?? '';
+const includeBanner = typeof bundle?.legal?.includeCookieBanner === 'boolean'
+  ? bundle.legal.includeCookieBanner
+  : true; // Default true si no está explícitamente desactivado
+
 // --- OBSERVABILIDAD DE SEGURIDAD ---
+// ... (resto del código estático)
 // Verifica si estamos sirviendo con headers seguros (Nota: En local/dev puede fallar, es esperado)
 const securityCheck = Astro.response.headers.get('Content-Security-Policy');
 if (!securityCheck && import.meta.env.PROD) {
-  // Nota: Cloudflare _headers aplica fuera de Astro, pero si usáramos middleware lo veríamos aquí.
-  // Mantenemos el log para confirmar si Astro mismo está endurecido.
   console.log('[OBSERVABILITY] ℹ️ CSP gestionado por Edge (Cloudflare)');
 } else if (securityCheck) {
   console.log('[OBSERVABILITY] 🛡️ Seguridad activa: Cabeceras L7 aplicadas correctamente.');
@@ -27,6 +34,10 @@ if (!securityCheck && import.meta.env.PROD) {
   <head>
     <!-- Componente Maestro: Cerebro SEO -->
     <SEO bundle={bundle} />
+
+    <!-- Sistema de Consentimiento y Tags (Enterprise 2026) -->
+    <ConsentAndTags bundle={bundle} />
+
 
     <!-- RUM: Core Web Vitals (Observabilidad Permanente) -->
     {ops?.rum?.enabled && (
@@ -89,5 +100,11 @@ if (!securityCheck && import.meta.env.PROD) {
   </head>
   <body>
     <slot />
+
+    <CookieBanner
+      includeBanner={includeBanner}
+      businessSlug={slug}
+      policyUrl={`/legal/${slug}/cookies`}
+    />
   </body>
 </html>

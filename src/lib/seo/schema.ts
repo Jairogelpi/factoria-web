@@ -1,4 +1,4 @@
-import type { Graph, WebSite, Organization, LocalBusiness, BreadcrumbList, Thing } from 'schema-dts';
+import type { Graph, WebSite, Organization, LocalBusiness, BreadcrumbList, Thing, Service } from 'schema-dts';
 import type { ClientSEOBundle } from '../../types/ClientBundle';
 
 export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): Graph {
@@ -107,14 +107,30 @@ export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): 
         })) as Thing[];
     }
 
-    // 5. Construcción del Grafo Unificado
+    // 5. Servicios (SGE Optimization)
+    // Cada servicios se declara como entidad independiente vinculada
+    const services: Service[] = (bundle.content.services || []).map(service => ({
+        '@type': 'Service',
+        name: service.name,
+        description: bundle.content.semantic_definitions?.[service.slug] || service.summary, // SGE Priority
+        provider: {
+            '@id': `${siteUrl}/#localbusiness`
+        },
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': `${permalink}#${service.slug}`
+        }
+    }));
+
+    // 6. Construcción del Grafo Unificado
     return {
         '@context': 'https://schema.org',
         '@graph': [
             website,
             organization,
             localBusiness,
-            breadcrumb
+            breadcrumb,
+            ...services
         ]
     };
 }

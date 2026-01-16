@@ -1,0 +1,142 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getClientBundle } from '../../../lib/db/queries';
+
+const { slug } = Astro.params;
+
+// getClientBundle debe devolver algo como:
+// { business_slug: string, seo_bundle: ClientSEOBundle }
+// o directamente { seo_bundle: ClientSEOBundle }
+const result = await getClientBundle(slug as string);
+
+// Normalizamos para soportar ambos casos sin romper
+const bundle = (result?.bundle ?? result) as any;
+
+// OBSERVABILIDAD: Log de generación de página legal
+console.log(`[OBS] ⚖️ Generando Política de Privacidad para: ${slug}`);
+
+// Fallbacks seguros
+const legal = bundle?.legal;
+const brandName = bundle?.brand?.name ?? 'Este negocio';
+const loc0 = bundle?.locations?.[0];
+
+const street = legal?.address ?? loc0?.address?.street ?? '';
+const locality = loc0?.address?.locality ?? '';
+const region = loc0?.address?.region ?? '';
+const postalCode = loc0?.address?.postalCode ?? '';
+const countryCode = legal?.countryCode ?? loc0?.address?.countryCode ?? '';
+
+const fiscalAddress = [street, postalCode, locality, region, countryCode]
+  .filter(Boolean)
+  .join(', ');
+
+const contactEmail =
+  legal?.email ??
+  loc0?.email ??
+  ''; // si no existe, se mostrará "Pendiente" en la vista
+
+const vatId = legal?.vatId ?? '';
+const companyName = legal?.companyName ?? brandName;
+---
+
+<Layout bundle={bundle} ops={bundle?.ops}>
+  <main class="legal-content">
+    <h1>Política de Privacidad</h1>
+
+    <section>
+      <h2>Responsable del tratamiento</h2>
+      <p>Responsable del tratamiento: {companyName}</p>
+      <p>CIF/NIF: {vatId || 'Pendiente'}</p>
+      <p>Dirección: {fiscalAddress || 'Pendiente'}</p>
+      <p>Contacto: {contactEmail || 'Pendiente'}</p>
+    </section>
+
+    <section>
+      <h2>Finalidad del tratamiento</h2>
+      <p>
+        Los datos personales facilitados a través de los formularios de contacto o
+        canales de comunicación se tratarán para gestionar las solicitudes de información,
+        prestar los servicios solicitados y atender comunicaciones relacionadas con la actividad.
+      </p>
+    </section>
+
+    <section>
+      <h2>Legitimación</h2>
+      <p>
+        La base jurídica del tratamiento es el consentimiento del interesado al enviar sus datos,
+        y/o la ejecución de medidas precontractuales o contractuales cuando proceda.
+      </p>
+    </section>
+
+    <section>
+      <h2>Conservación</h2>
+      <p>
+        Los datos se conservarán durante el tiempo necesario para atender la solicitud y, en su caso,
+        durante los plazos legalmente exigibles.
+      </p>
+    </section>
+
+    <section>
+      <h2>Destinatarios</h2>
+      <p>
+        No se cederán datos a terceros salvo obligación legal o cuando sea necesario para la prestación
+        del servicio (por ejemplo, proveedores tecnológicos), bajo los correspondientes acuerdos de encargo.
+      </p>
+    </section>
+
+    <section>
+      <h2>Derechos</h2>
+      <p>
+        Puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad
+        enviando una solicitud a: {contactEmail || 'el canal de contacto del sitio'}.
+      </p>
+      <p>
+        Si considera que el tratamiento no se ajusta a la normativa, puede presentar una reclamación
+        ante la autoridad de control competente.
+      </p>
+    </section>
+
+    <section>
+      <h2>Seguridad</h2>
+      <p>
+        Se aplican medidas técnicas y organizativas razonables para proteger la información frente a accesos
+        no autorizados, pérdida o alteración.
+      </p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .legal-content {
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 2rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    color: #2d3436;
+  }
+  
+  .legal-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #2d3436;
+    border-bottom: 2px solid #0984e3;
+    padding-bottom: 0.5rem;
+  }
+
+  .legal-content section {
+    margin-bottom: 2.5rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.5rem;
+    color: #2d3436;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .legal-content p {
+    margin-bottom: 1rem;
+    color: #636e72;
+  }
+</style>

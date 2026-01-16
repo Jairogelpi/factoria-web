@@ -1,0 +1,144 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getClientBundle } from '../../../lib/db/queries';
+
+const { slug } = Astro.params;
+
+const result = await getClientBundle(slug as string);
+const bundle = (result?.seo_bundle ?? result?.bundle ?? result) as any;
+
+console.log(`[OBS] ⚖️ Generando Aviso Legal para: ${slug}`);
+
+const legal = bundle?.legal;
+const brandName = bundle?.brand?.name ?? 'Este negocio';
+const legalName = bundle?.brand?.legalName ?? '';
+const loc0 = bundle?.locations?.[0];
+
+const street = legal?.address ?? loc0?.address?.street ?? '';
+const locality = loc0?.address?.locality ?? '';
+const region = loc0?.address?.region ?? '';
+const postalCode = loc0?.address?.postalCode ?? '';
+const countryCode = legal?.countryCode ?? loc0?.address?.countryCode ?? '';
+
+const fiscalAddress = [street, postalCode, locality, region, countryCode]
+  .filter(Boolean)
+  .join(', ');
+
+const vatId = legal?.vatId ?? '';
+const companyName = legal?.companyName ?? legalName ?? brandName;
+
+const email =
+  legal?.email ??
+  loc0?.email ??
+  '';
+
+const telephone =
+  loc0?.telephone ??
+  '';
+
+const websiteUrl =
+  bundle?.brand?.url ??
+  (loc0?.gbp?.mapsUrl ?? '');
+
+const schemaType =
+  loc0?.schemaType ??
+  'LocalBusiness';
+---
+
+<Layout bundle={bundle} ops={bundle?.ops}>
+  <main class="legal-content">
+    <h1>Aviso Legal</h1>
+
+    <section>
+      <h2>Identificación del titular</h2>
+      <p><strong>Titular:</strong> {companyName}</p>
+      <p><strong>Actividad:</strong> {schemaType}</p>
+      <p><strong>CIF/NIF:</strong> {vatId || 'Pendiente'}</p>
+      <p><strong>Domicilio:</strong> {fiscalAddress || 'Pendiente'}</p>
+      <p><strong>Email de contacto:</strong> {email || 'Pendiente'}</p>
+      <p><strong>Teléfono:</strong> {telephone || 'Pendiente'}</p>
+      <p><strong>Sitio web:</strong> {websiteUrl || 'Pendiente'}</p>
+    </section>
+
+    <section>
+      <h2>Condiciones de uso</h2>
+      <p>
+        El acceso y uso de este sitio web atribuye la condición de usuario e implica la aceptación plena
+        y sin reservas de las presentes condiciones. El usuario se compromete a utilizar el sitio web de
+        conformidad con la ley, la buena fe, el orden público y las presentes condiciones.
+      </p>
+    </section>
+
+    <section>
+      <h2>Propiedad intelectual e industrial</h2>
+      <p>
+        Salvo que se indique lo contrario, los contenidos del sitio web (textos, imágenes, marcas, logotipos
+        y demás elementos) están protegidos por los derechos de propiedad intelectual e industrial.
+        Queda prohibida su reproducción, distribución o transformación sin autorización del titular,
+        salvo en los casos permitidos por la normativa aplicable.
+      </p>
+    </section>
+
+    <section>
+      <h2>Responsabilidad</h2>
+      <p>
+        El titular no se responsabiliza de los daños o perjuicios derivados del uso del sitio web,
+        ni de la existencia de virus u otros elementos que puedan producir alteraciones en los sistemas
+        informáticos del usuario. Asimismo, el titular no garantiza la disponibilidad continua del sitio
+        ni la ausencia de errores en el acceso.
+      </p>
+    </section>
+
+    <section>
+      <h2>Enlaces</h2>
+      <p>
+        Este sitio puede incluir enlaces a sitios de terceros. El titular no se responsabiliza del contenido
+        ni de las políticas de privacidad de dichos sitios.
+      </p>
+    </section>
+
+    <section>
+      <h2>Legislación aplicable</h2>
+      <p>
+        Las presentes condiciones se regirán por la legislación aplicable en el país indicado en el sitio.
+        En caso de controversia, las partes se someten a los juzgados y tribunales que correspondan conforme
+        a la normativa vigente.
+      </p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .legal-content {
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 2rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    color: #2d3436;
+  }
+  
+  .legal-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #2d3436;
+    border-bottom: 2px solid #0984e3;
+    padding-bottom: 0.5rem;
+  }
+
+  .legal-content section {
+    margin-bottom: 2.5rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.5rem;
+    color: #2d3436;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .legal-content p {
+    margin-bottom: 1rem;
+    color: #636e72;
+  }
+</style>

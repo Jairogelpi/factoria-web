@@ -1,7 +1,3 @@
-export type Environment = "prod" | "staging";
-
-export type BundleStatus = "draft" | "ready" | "published";
-
 // ISO 8601 HH:MM
 export type TimeHHMM = `${number}${number}:${number}${number}`;
 
@@ -16,108 +12,118 @@ export type DayOfWeek =
     | "Sunday";
 
 export interface ClientSEOBundle {
-    // Operación / observabilidad (no se expone al público si no quieres)
     ops: {
-        clientId: string; // interno (cozy-caceres)
-        environment: Environment;
+        clientId: string;
+        environment: "prod" | "staging";
         rum: { enabled: boolean; sampleRate: number };
-        alertingTargets?: string[]; // webhooks, emails, etc.
-        indexNowKey?: string; // Llave única para indexación por empresa
+        alertingTargets?: string[];
+        indexNowKey?: string;
     };
-
-    // Identidad de marca (Organization)
     brand: {
         name: string;
         legalName?: string;
-        url: string; // raíz del sitio (https://dominio.tld)
-        logo: string; // URL o path público
-        sameAs?: string[]; // redes sociales corporativas
+        url: string;
+        logo: string;
+        sameAs?: string[];
     };
-
-    // Sedes (LocalBusiness). Una web puede ser single-location o multi-location.
     locations: Array<{
-        id: string; // "centro", "norte"...
-        name: string; // "COZY Cáceres Centro"
-        schemaType: string; // "HairSalon", "Restaurant", "LocalBusiness", etc.
+        id: string;
+        name: string;
+        schemaType: string;
         telephone: string;
         email?: string;
-        priceRange?: string; // "€€", "$$", etc.
-        image: string; // foto principal (fachada/interior)
+        priceRange?: string;
+        image?: string;
 
         address: {
             street: string;
             locality: string; // ciudad
-            region: string;
+            region?: string;
             postalCode: string;
-            countryCode: string; // "ES"
+            countryCode: string;
         };
 
-        geo: { lat: number; lng: number };
+        geo?: { lat: number; lng: number };
 
-        openingHours: Array<{
+        openingHours?: Array<{
             days: DayOfWeek[];
             open: TimeHHMM;
             close: TimeHHMM;
         }>;
 
-        // Identificadores reales de Google (consistencia local)
-        gbp?: {
-            placeId: string; // "ChIJ..."
-            mapsUrl: string; // https://maps.app.goo.gl/...
-            cid?: string;
-        };
+        gbp?: { placeId: string; mapsUrl: string; cid?: string; };
     }>;
 
-    // Configuración SEO técnica
+    // Configuración SEO técnica (Restaurado)
     seo: {
         siteName: string;
-        locale: string; // "es-ES"
-        canonicalBase: string; // debe ser https://dominio.tld
-        defaultTitlePattern: string; // "{page} | {brand} {city}"
+        locale: string;
+        canonicalBase: string;
+        defaultTitlePattern: string;
         defaultDescription: string;
         robots: "index, follow" | "noindex, nofollow";
     };
 
-    // Contenido para páginas
     content: {
         home: { headline: string; subheadline: string };
 
-        cta_primary: {
-            url: string;
-            text: string;
-        };
-        microcopy: string;
+        cta_primary?: { url: string; text: string; };
+        microcopy?: string;
 
-        services: Array<{
-            slug: string;
-            name: string;
-            summary: string;
-            description: string; // build gate de thin content
-        }>;
-
+        services: Array<{ slug: string; name: string; summary: string; description: string }>;
+        // NUEVO CAMPO PARA SGE 2026: Diccionario de micro-respuestas semánticas
+        semantic_definitions?: Record<string, string>;
         faq?: Array<{ q: string; a: string }>;
+        internal_links?: Array<{
+            fromServiceId: string;
+            toServiceId: string;
+            anchor: string;
+            reason: string;
+        }>;
         semantic_entities?: string[];
         semantic_hierarchy?: { category_name: string; category_url: string };
     };
 
-    // JSON-LD (Schema.org) pre-generado
+    // JSON-LD (Schema.org) pre-generado (Restaurado)
     jsonLd?: Record<string, any> | Array<Record<string, any>>;
 
-    // Multimedia (OpenGraph, galería, etc.)
     media: {
-        hero: string;
-        ogImage?: string; // si no, usar hero
-        gallery?: Array<{ src: string; alt: string; width?: number; height?: number }>;
+        hero: { url: string; alt: string }; // Objeto para Alt-Text IA
+        ogImage?: string;
+        gallery: Array<{ src: string; alt: string; width?: number; height?: number }>;
     };
 
-    // Performance policies
+    social_proof?: {
+        rating?: number;
+        reviews_count?: number;
+    };
+
+    // Performance policies (Restaurado)
     performance: {
-        thirdPartyWhitelist: string[]; // lista blanca interna (por id)
+        thirdPartyWhitelist: string[];
     };
 
-    // Legal (según país)
+    // Legal (Restaurado & Ampliado)
     legal?: {
-        countryCode: string; // "ES"
+        countryCode: string;
         includeCookieBanner?: boolean;
+
+        // Datos para Textos Legales Automáticos
+        companyName: string;   // Razón Social
+        vatId: string;        // CIF/NIF
+        address: string;      // Dirección fiscal
+        email: string;        // Email para ejercicio de derechos
+
+        consentModeV2?: {
+            enabled: boolean;
+            cmp: "axeptio" | "cookiebot" | "didomi";
+            axeptio?: {
+                projectId: string;
+                cookiesVersion: string;
+            };
+            gtm: {
+                containerId: string;
+            };
+        };
     };
 }

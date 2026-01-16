@@ -1,0 +1,74 @@
+---
+// src/components/ConsentAndTags.astro
+import type { ClientSEOBundle } from "../types/ClientBundle";
+import { assertConsentBundle } from "../lib/legal/consentGate";
+
+interface Props {
+  bundle: ClientSEOBundle;
+}
+
+const { bundle } = Astro.props;
+const consent = bundle.legal?.consentModeV2;
+
+// Si no hay consentimiento habilitado, no renderizamos nada
+if (!consent?.enabled) {
+    return;
+}
+
+// Ejecución del Gate: Si falla, la página no se renderiza y el build se detiene
+try {
+    assertConsentBundle(bundle);
+} catch (e) {
+    // En desarrollo mostramos error, en build fallamos
+    if (import.meta.env.PROD) {
+        throw e;
+    } else {
+        console.error(e.message);
+    }
+}
+
+// Nonce para CSP (si se usa middleware, Astro.locals debería tenerlo)
+const nonce = Astro.locals?.cspNonce || ''; 
+
+const { projectId, cookiesVersion } = consent.axeptio || {};
+const gtmId = consent.gtm.containerId;
+---
+
+<!-- 1. Default Consent State (Prioridad Máxima) -->
+<script nonce={nonce} is:inline>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    ad_storage: 'denied',
+    analytics_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    functionality_storage: 'granted',
+    security_storage: 'granted',
+    wait_for_update: 500
+  });
+  console.log('[OBSERVABILITY] 🛡️ Consent Mode v2 inicializado (Default: Denied)');
+</script>
+
+<!-- 2. CMP SDK (Axeptio) -->
+{consent.cmp === 'axeptio' && (
+    <>
+        <script nonce={nonce} is:inline define:vars={{ projectId, cookiesVersion }}>
+        window.axeptioSettings = {
+            clientId: projectId,
+            cookiesVersion: cookiesVersion,
+            googleConsentMode: true
+        };
+        </script>
+        <script nonce={nonce} defer src="https://static.axept.io/sdk-slim.js"></script>
+    </>
+)}
+
+<!-- 3. Google Tag Manager (Triggered post-consent) -->
+<script nonce={nonce} is:inline define:vars={{ gtmId }}>
+  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer',gtmId);
+</script>

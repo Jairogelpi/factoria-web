@@ -7,8 +7,8 @@ on:
     - cron: '0 9 * * *' # Ejecuta el Healthcheck sintético todos los días a las 09:00
 
 jobs:
-  # JOB 1: Validaciones de calidad antes de desplegar
-  quality-gate:
+  # Master Release Gate & Deploy
+  release-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,29 +22,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright & Browsers
         run: npx playwright install --with-deps chromium
 
-      - name: [OBSERVABILITY] Run Accessibility Gate (UE Standard)
-        run: npm run test:a11y
-        # Este paso detendrá el despliegue si hay errores críticos de accesibilidad
+      # 🛡️ Release Gate Enterprise 2026 (Runs all 6 Gates)
+      - name: [OBSERVABILITY] Run Master Release Gate
+        run: npm run gate
+        env:
+           # Lighthouse might need a higher timeout or specific flags in CI, handled in script
+           CI: true
 
-  # JOB 2: Despliegue (Ejemplo para Cloudflare Pages)
-  deploy:
-    needs: quality-gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
       - name: Deploy to Cloudflare Pages
+        if: success()
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy public --project-name=factoria-web
 
-  # JOB 3: Monitoreo Sintético Post-Despliegue
+  # Post-Deploy Monitoring (Separated to not block deploy if it fails, but runs after)
   post-deploy-monitoring:
-    needs: deploy
+    needs: release-and-deploy
     runs-on: ubuntu-latest
     env:
       URLS: "https://factoria-web.pages.dev" # Actualiza con la URL real si difiere

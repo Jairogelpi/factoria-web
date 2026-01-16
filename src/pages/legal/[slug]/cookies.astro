@@ -1,0 +1,136 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getClientBundle } from '../../../lib/db/queries';
+
+const { slug } = Astro.params;
+
+const result = await getClientBundle(slug as string);
+const bundle = (result?.seo_bundle ?? result?.bundle ?? result) as any;
+
+console.log(`[OBS] 🍪 Generando Política de Cookies para: ${slug}`);
+
+const legal = bundle?.legal;
+const brandName = bundle?.brand?.name ?? 'Este negocio';
+
+// Por defecto: si no existe legal o no existe includeCookieBanner, asumimos true
+const includeCookieBanner =
+  typeof legal?.includeCookieBanner === 'boolean'
+    ? legal.includeCookieBanner
+    : true;
+
+const websiteUrl =
+  bundle?.brand?.url ??
+  bundle?.locations?.[0]?.gbp?.mapsUrl ??
+  '';
+
+const contactEmail =
+  legal?.email ??
+  bundle?.locations?.[0]?.email ??
+  '';
+---
+
+<Layout bundle={bundle} ops={bundle?.ops}>
+  <main class="legal-content">
+    <h1>Política de Cookies</h1>
+
+    {includeCookieBanner ? (
+      <>
+        <section>
+          <h2>¿Qué son las cookies?</h2>
+          <p>
+            Las cookies son pequeños archivos que se almacenan en el dispositivo del usuario cuando visita
+            un sitio web. Sirven para recordar información sobre la navegación y pueden utilizarse para mejorar
+            la experiencia del usuario, analizar el uso del sitio o mostrar contenidos personalizados.
+          </p>
+        </section>
+
+        <section>
+          <h2>Tipos de cookies</h2>
+          <p>
+            Este sitio puede utilizar cookies técnicas (necesarias para su funcionamiento), cookies de análisis
+            (para medir y analizar la navegación) y, en su caso, cookies de personalización o publicitarias,
+            dependiendo de la configuración y servicios integrados.
+          </p>
+        </section>
+
+        <section>
+          <h2>Gestión de cookies</h2>
+          <p>
+            El usuario puede permitir, bloquear o eliminar las cookies instaladas mediante la configuración del
+            navegador. La desactivación de cookies puede afectar al correcto funcionamiento de algunas secciones.
+          </p>
+        </section>
+
+        <section>
+          <h2>Consentimiento</h2>
+          <p>
+            Cuando sea aplicable, el usuario podrá aceptar o rechazar el uso de cookies no necesarias a través del
+            mecanismo de consentimiento mostrado en el sitio.
+          </p>
+        </section>
+
+        <section>
+          <h2>Más información</h2>
+          <p>
+            Para cualquier duda relacionada con el uso de cookies, puede contactar con:
+            {' '}
+            {contactEmail || 'el canal de contacto del sitio'}.
+          </p>
+          <p>
+            Sitio web: {websiteUrl || 'Pendiente'}.
+          </p>
+        </section>
+      </>
+    ) : (
+      <>
+        <section>
+          <p>
+            Este sitio no utiliza un banner de cookies configurado. Si se incorporan cookies no necesarias en el futuro,
+            se habilitará el mecanismo de consentimiento correspondiente.
+          </p>
+        </section>
+
+        <section>
+          <p>
+            Para cualquier duda, puede contactar con: {contactEmail || 'el canal de contacto del sitio'}.
+          </p>
+        </section>
+      </>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .legal-content {
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 2rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    color: #2d3436;
+  }
+  
+  .legal-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #2d3436;
+    border-bottom: 2px solid #0984e3;
+    padding-bottom: 0.5rem;
+  }
+
+  .legal-content section {
+    margin-bottom: 2.5rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.5rem;
+    color: #2d3436;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .legal-content p {
+    margin-bottom: 1rem;
+    color: #636e72;
+  }
+</style>
