@@ -81,6 +81,12 @@ export interface ClientSEOBundle {
     content: {
         home: { headline: string; subheadline: string };
 
+        cta_primary: {
+            url: string;
+            text: string;
+        };
+        microcopy: string;
+
         services: Array<{
             slug: string;
             name: string;
@@ -89,7 +95,12 @@ export interface ClientSEOBundle {
         }>;
 
         faq?: Array<{ q: string; a: string }>;
+        semantic_entities?: string[];
+        semantic_hierarchy?: { category_name: string; category_url: string };
     };
+
+    // JSON-LD (Schema.org) pre-generado
+    jsonLd?: Record<string, any> | Array<Record<string, any>>;
 
     // Multimedia (OpenGraph, galería, etc.)
     media: {

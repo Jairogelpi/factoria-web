@@ -211,22 +211,22 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
 
     <section>
       <h2>Sobre Nosotros</h2>
-      <p>{safeBundle.content?.about?.text || safeBundle.brand?.description}</p>
+      <p>{bundle.content.about?.text || bundle.brand.description}</p>
       
       <h3>Nuestra Oferta</h3>
       <ul>
-        {(safeBundle.content?.services || []).map((item: string) => (
-          <li>{item}</li>
+        {(bundle.content.services || []).map((item) => (
+          <li>{item.name}</li>
         ))}
       </ul>
       
       {/* Galería de Imágenes */}
-      {(safeBundle.media?.gallery || []).length > 0 && (
+      {(bundle.media.gallery || []).length > 0 && (
         <div class="gallery-grid">
-          {(safeBundle.media.gallery).map((imgUrl: string, index: number) => (
+          {(bundle.media.gallery || []).map((img, index) => (
              <img 
-               src={imgUrl} 
-               alt={`Galería ${safeBundle.brand?.name} - Foto ${index + 1}`}
+               src={img.src} 
+               alt={img.alt}
                loading="lazy"
                class="gallery-img"
                width="400" height="300"
@@ -237,22 +237,18 @@ const ops = safeBundle.ops || { rum: { enabled: true } };
     </section>
 
     {/* Sección FAQs */}
-    {(safeBundle.content?.faqs || []).length > 0 && (
+    {(bundle.content.faq || []).length > 0 && (
       <section class="faqs-section">
         <h3>Preguntas Frecuentes</h3>
         <dl>
-          {(safeBundle.content.faqs).map((faq: any) => (
+          {(bundle.content.faq || []).map((faq) => (
             <>
-              <dt>{faq.question}</dt>
-              <dd>{faq.answer}</dd>
+              <dt>{faq.q}</dt>
+              <dd>{faq.a}</dd>
             </>
           ))}
         </dl>
       </section>
-    )}
-    
-    {(safeBundle.socialProof?.trustBadge) && (
-        <div class="badge">🏆 {safeBundle.socialProof.trustBadge}</div>
     )}
 
   </main>
