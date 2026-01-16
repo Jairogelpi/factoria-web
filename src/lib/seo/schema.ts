@@ -48,12 +48,12 @@ export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): 
             postalCode: location.address.postalCode,
             addressCountry: location.address.countryCode
         },
-        geo: {
+        geo: location.geo ? {
             '@type': 'GeoCoordinates',
             latitude: location.geo.lat,
             longitude: location.geo.lng
-        },
-        openingHoursSpecification: location.openingHours.flatMap(oh =>
+        } : undefined,
+        openingHoursSpecification: (location.openingHours || []).flatMap(oh =>
             oh.days.map(day => ({
                 '@type': 'OpeningHoursSpecification',
                 dayOfWeek: day,

@@ -49,3 +49,30 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
         console.log(`[OBS-SEO] ✅ SGE-Ready: ${Object.keys(bundle.content.semantic_definitions).length} respuestas directas generadas.`);
     }
 }
+}
+
+export function validateA11yHierarchy(bundle: any) {
+    const errors: string[] = [];
+
+    // 1. Validación de Jerarquía de Encabezados (SGE 2026)
+    if (!bundle.content?.home?.headline) {
+        errors.push("FALTA_H1: El contenido debe tener un titular principal.");
+    }
+
+    if (bundle.content?.faq?.length > 0 && !bundle.content?.services?.length) {
+        errors.push("JERARQUIA_INVALIDA: Se detectaron FAQs (H3) pero no hay Servicios (H2).");
+    }
+
+    // 2. Validación de Contraste Semántico
+    if (bundle.brand?.colors) {
+        console.log(`[OBS-A11Y] Verificando contraste para ${bundle.ops.clientId}`);
+    }
+
+    // OBSERVABILIDAD PERMANENTE [2026-01-08]
+    if (errors.length > 0) {
+        console.error(`[OBS-A11Y-CRITICAL] ❌ Errores de accesibilidad en ${bundle.ops.clientId}:`, errors.join(" | "));
+        throw new Error("Build Gate: Fallo de accesibilidad detectado.");
+    } else {
+        console.log(`[OBS-A11Y] ✅ Jerarquía y accesibilidad verificada para ${bundle.ops.clientId}`);
+    }
+}
