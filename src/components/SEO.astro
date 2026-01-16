@@ -1,0 +1,65 @@
+---
+import { generateSchemaGraph } from "../lib/seo/schema";
+import { validateBundleStrict } from "../lib/seo/validation";
+import type { ClientSEOBundle } from "../types/ClientBundle";
+
+interface Props {
+  bundle: ClientSEOBundle;
+  pageTitle?: string;
+  pageDesc?: string;
+  noIndex?: boolean;
+}
+
+const { bundle, pageTitle, pageDesc, noIndex = false } = Astro.props;
+const path = Astro.url.pathname;
+const env = (import.meta.env.MODE === "production") ? "prod" : "staging";
+
+// Build gate (falla si hay problemas críticos)
+validateBundleStrict(bundle, env);
+
+const { brand, seo, locations, media } = bundle;
+const mainLoc = locations[0];
+
+// Title factory
+const finalTitle = pageTitle
+  ? seo.defaultTitlePattern
+      .replace("{page}", pageTitle)
+      .replace("{brand}", brand.name)
+      .replace("{city}", mainLoc.address.locality)
+  : `${brand.name} - ${mainLoc.address.locality}`;
+
+const description = pageDesc || seo.defaultDescription;
+const canonicalURL = new URL(path, seo.canonicalBase).toString();
+
+const robotsContent = noIndex ? "noindex, nofollow" : seo.robots;
+
+// Generate Strict Schema Graph
+const jsonLD = JSON.stringify(generateSchemaGraph(bundle, path));
+
+const ogImage = media.ogImage || media.hero;
+
+// Observability Log
+console.log(`[OBSERVABILITY] 🔍 SEO Head generado para: ${path} | Env: ${env} | Index: ${!noIndex}`);
+---
+
+<title>{finalTitle}</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width" />
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+<meta name="robots" content={robotsContent} />
+
+<meta property="og:type" content="business.business" />
+<meta property="og:title" content={finalTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content={seo.siteName || brand.name} />
+<meta property="og:locale" content={seo.locale || "es_ES"} />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={finalTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<script type="application/ld+json" set:html={jsonLD} />

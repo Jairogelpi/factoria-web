@@ -1,0 +1,70 @@
+name: CI/CD Factoría Web 2026
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 9 * * *' # Ejecuta el Healthcheck sintético todos los días a las 09:00
+
+jobs:
+  # JOB 1: Validaciones de calidad antes de desplegar
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: [OBSERVABILITY] Run Accessibility Gate (UE Standard)
+        run: npm run test:a11y
+        # Este paso detendrá el despliegue si hay errores críticos de accesibilidad
+
+  # JOB 2: Despliegue (Ejemplo para Cloudflare Pages)
+  deploy:
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=factoria-web
+
+  # JOB 3: Monitoreo Sintético Post-Despliegue
+  post-deploy-monitoring:
+    needs: deploy
+    runs-on: ubuntu-latest
+    env:
+      URLS: "https://factoria-web.pages.dev" # Actualiza con la URL real si difiere
+      INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      
+      - name: [OBSERVABILITY] Run Synthetic Healthcheck
+        run: node scripts/synthetic-check.mjs
+        # Verifica H1, JSON-LD y Status HTTP en producción
+
+      - name: [SEO] Notificación Multitenant IndexNow
+        env:
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Ejecutamos el script profesional de notificación
+          # Este script lee de Supabase los bundles que necesitan indexación
+          node scripts/notify-indexnow.mjs

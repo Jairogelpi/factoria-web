@@ -4,18 +4,23 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "npm run test:a11y && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test:a11y": "playwright test tests/a11y.spec.ts",
+    "deploy:check": "npm run test:a11y && astro build"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.6",
     "@supabase/supabase-js": "^2.90.1",
     "astro": "^5.16.9",
+    "schema-dts": "^1.1.5",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@astrojs/cloudflare": "^12.6.12",
-    "@astrojs/sitemap": "^3.6.1"
+    "@astrojs/sitemap": "^3.7.0",
+    "@axe-core/playwright": "^4.11.0",
+    "playwright": "^1.57.0"
   }
 }

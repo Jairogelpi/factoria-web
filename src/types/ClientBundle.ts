@@ -22,6 +22,7 @@ export interface ClientSEOBundle {
         environment: Environment;
         rum: { enabled: boolean; sampleRate: number };
         alertingTargets?: string[]; // webhooks, emails, etc.
+        indexNowKey?: string; // Llave única para indexación por empresa
     };
 
     // Identidad de marca (Organization)

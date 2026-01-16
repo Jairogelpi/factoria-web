@@ -1,66 +1,38 @@
 ---
 // Layout.astro
-type Seo = {
-  meta_title?: string;
-  meta_description?: string;
-  canonical_path?: string;
-  og_image?: string;
-};
+import SEO from '../components/SEO.astro';
+import type { ClientSEOBundle } from '../types/ClientBundle';
 
-// Props: Ahora aceptamos 'schema_jsonld' y 'extra_meta'
-const { seo, schema_jsonld, extra_meta = [], ops = { rum: { enabled: true } } } = Astro.props;
+interface Props {
+  bundle: ClientSEOBundle;
+  ops?: { rum: { enabled: boolean } };
+  extra_meta?: any[]; // Keep for backward compatibility if needed, though SEO.astro handles most
+}
 
-const base = import.meta.env.PUBLIC_BASE_URL || "https://factoria-web.pages.dev";
-// Lógica de canonical (Correcta)
-const canonicalPath = (seo?.canonical_path || "").replace(/^\//, "");
-const canonicalUrl = canonicalPath
-  ? `${base.replace(/\/$/, "")}/${canonicalPath}`
-  : base;
+const { bundle, ops = { rum: { enabled: true } } } = Astro.props;
 
-const title = seo?.meta_title || "";
-const description = seo?.meta_description || "";
-
-// Lógica de OG Image (Correcta)
-const ogImage = seo?.og_image
-  ? (seo.og_image.startsWith("http") ? seo.og_image : `${base.replace(/\/$/, "")}/${seo.og_image.replace(/^\//, "")}`)
-  : "";
+// --- OBSERVABILIDAD DE SEGURIDAD ---
+// Verifica si estamos sirviendo con headers seguros (Nota: En local/dev puede fallar, es esperado)
+const securityCheck = Astro.response.headers.get('Content-Security-Policy');
+if (!securityCheck && import.meta.env.PROD) {
+  // Nota: Cloudflare _headers aplica fuera de Astro, pero si usáramos middleware lo veríamos aquí.
+  // Mantenemos el log para confirmar si Astro mismo está endurecido.
+  console.log('[OBSERVABILITY] ℹ️ CSP gestionado por Edge (Cloudflare)');
+} else if (securityCheck) {
+  console.log('[OBSERVABILITY] 🛡️ Seguridad activa: Cabeceras L7 aplicadas correctamente.');
+}
 ---
 
 <html lang="es">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    
-    {title && <title>{title}</title>}
-    {description && <meta name="description" content={description} />}
+    <!-- Componente Maestro: Cerebro SEO -->
+    <SEO bundle={bundle} />
 
-    <link rel="canonical" href={canonicalUrl} />
-
-    <meta property="og:type" content="website" />
-    {title && <meta property="og:title" content={title} />}
-    {description && <meta property="og:description" content={description} />}
-    <meta property="og:url" content={canonicalUrl} />
-    {ogImage && <meta property="og:image" content={ogImage} />}
-
-    <!-- Twitter Card (SEO Técnico) -->
-    <meta name="twitter:card" content="summary_large_image" />
-    {title && <meta name="twitter:title" content={title} />}
-    {description && <meta name="twitter:description" content={description} />}
-    {ogImage && <meta name="twitter:image" content={ogImage} />}
-
-    {extra_meta.map((meta: any) => (
-       <meta name={meta.name} content={meta.content} />
-    ))}
-
-    {schema_jsonld && (
-      <script type="application/ld+json" set:html={JSON.stringify(schema_jsonld)} />
-    )}
-    {ops.rum?.enabled && (
+    <!-- RUM: Core Web Vitals (Observabilidad Permanente) -->
+    {ops?.rum?.enabled && (
       <script is:inline>
-        // Función para enviar métricas a tu sistema o analítica
         const sendToAnalytics = ({ name, value, id }) => {
           const body = JSON.stringify({ name, value, id, url: window.location.href });
-          // Usamos sendBeacon para no bloquear la descarga de la página
           if (navigator.sendBeacon) {
             navigator.sendBeacon('/api/metrics', body);
           } else {
@@ -69,12 +41,10 @@ const ogImage = seo?.og_image
           console.log(`[RUM] 📊 ${name}: ${value}`);
         };
 
-        // Observador de métricas Core Web Vitals
         if ('PerformanceObserver' in window) {
           try {
             const po = new PerformanceObserver((list) => {
               for (const entry of list.getEntries()) {
-                // Filtramos por métricas críticas de 2026 (LCP, CLS, INP)
                 if (['largest-contentful-paint', 'layout-shift', 'first-input'].includes(entry.entryType)) {
                    sendToAnalytics({
                      name: entry.entryType,
@@ -94,6 +64,8 @@ const ogImage = seo?.og_image
       </script>
     )}
 
+    <!-- Speculation Rules: Velocidad Radical -->
+    <!-- Speculation Rules: Velocidad Radical (0ms Navigation) -->
     <script type="speculationrules">
     {
       "prerender": [
@@ -103,18 +75,16 @@ const ogImage = seo?.og_image
           "score": 0.5
         },
         {
-          "where": { "href_matches": "/*" },
+          "where": { 
+            "and": [
+              { "href_matches": "/*" },
+              { "not": { "href_matches": ["/api/*", "/admin/*"] } }
+            ]
+          },
           "eagerness": "moderate"
         }
       ]
     }
-    </script>
-    
-    <script>
-      // Observabilidad de Speculation Rules
-      if (HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules')) {
-        console.log('[OBSERVABILITY] 🚀 Speculation Rules activas (0ms loading ready)');
-      }
     </script>
   </head>
   <body>

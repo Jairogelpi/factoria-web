@@ -1,151 +1,46 @@
 ---
-import Layout from '../../layouts/Layout.astro'; // Asegúrate de importar tu Layout
-import { createClient } from '@supabase/supabase-js';
-
-// 1. Configuración Cliente Supabase
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import Layout from '../../layouts/Layout.astro';
+import { getClientBundle } from '../../lib/db/queries';
+import { generateSchemaGraph } from '../../lib/seo/schema';
 
 const { slug } = Astro.params;
 
-// 1. Definición de campos críticos para SEO 2026 (Unified Contract)
-const CRITICAL_FIELDS = [
-  { path: 'brand.name', label: 'Nombre Comercial' },
-  { path: 'content.home.headline', label: 'H1 SEO' },
-  { path: 'seo.defaultDescription', label: 'Meta Descripción' },
-  { path: 'media.hero', label: 'Imagen Hero' }
-];
+// 1. OBTENCIÓN UNIFICADA
+// Incluye validación, métricas, latencia y Build Gates
+const { bundle: safeBundle, bundle_hash } = await getClientBundle(slug as string);
 
-// 2. Función de Validación (Build Gate)
-function validateSeoBundle(bundle: any) {
-  const missing = CRITICAL_FIELDS.filter(field => {
-    const value = field.path.split('.').reduce((obj, key) => obj?.[key], bundle);
-    return !value || value === "";
-  });
-
-  if (missing.length > 0) {
-    const errorMsg = `[BUILD GATE] ❌ Error crítico en "${slug}": Faltan campos: ${missing.map(f => f.label).join(', ')}`;
-    console.error(errorMsg);
-    // En SSR esto enviará un error 500; en SSG romperá el proceso de build
-    throw new Error(errorMsg);
-  }
+// 2. GENERAR SCHEMA GRAPH
+let graphSchema;
+try {
+  graphSchema = generateSchemaGraph(safeBundle, Astro.url.pathname);
+  console.log(`[OBSERVABILITY] ✅ Graph SEO generado para ${slug} (${graphSchema["@graph"].length} entidades)`);
+} catch (e: any) {
+  console.error(`[OBSERVABILITY] ❌ Error generando Graph SEO: ${e.message}`);
+  // Recovery: Empty graph
+  graphSchema = { "@context": "https://schema.org", "@graph": [] };
 }
 
-// --- OBSERVABILIDAD (Start) ---
-const startMetric = performance.now();
-let metricStatus = 'success';
+// 3. CACHE Y SEGURIDAD
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=3600');
+Astro.response.headers.set('X-Bundle-Hash', bundle_hash);
 
-// 2. Consulta a la Fuente de la Verdad
-// NOTA: Asegúrate de que en Supabase tienes estas columnas o que el JSON las incluye.
-// Si guardaste todo en 'seo_bundle', ajusta la desestructuración abajo.
-const { data, error } = await supabase
-  .from('sites_factory')
-  .select('seo_bundle, schema_json_ld') // Pedimos Datos + Schema
-  .eq('business_slug', slug)
-  .single();
+// Observability Extra
+const authorityScore = safeBundle.brand?.sameAs?.length || 0;
+console.log(`[OBSERVABILITY] 💎 SEO Divino: ${slug} | Autoridad: ${authorityScore} fuentes | Categoría: ${safeBundle.content?.semantic_hierarchy?.category_name || 'N/A'}`);
 
-const endMetric = performance.now();
-const duration = (endMetric - startMetric).toFixed(2);
-
-if (error || !data) {
-    metricStatus = 'error_not_found';
-    console.error(`[OBSERVABILITY] ❌ Error fetching ${slug}: ${error?.message}`);
-    return Astro.redirect('/404');
-}
-
-console.log(`[OBSERVABILITY] ⏱️ Renderizado SSR para: ${slug} | DB Latency: ${duration}ms`);
-// -----------------------------
-
-// 3. Extraer el Bundle (Unified Contract)
-const bundle = data.seo_bundle; 
-const schema = data.schema_json_ld;
-
-// Parseamos si viene como string
-const safeBundle = typeof bundle === 'string' ? JSON.parse(bundle) : bundle;
-const safeSchema = typeof schema === 'string' ? JSON.parse(schema) : schema;
-
-// 3.1 Enriquecer Schema con "Authority Map" (mentions)
-if (safeBundle.content?.semantic_entities && Array.isArray(safeBundle.content.semantic_entities)) {
-  safeSchema.mentions = safeBundle.content.semantic_entities.map((url: string) => ({
-    "@type": "Thing",
-    "@id": url,
-    "name": url.split('/').pop()?.replace(/_/g, ' ') || url
-  }));
-}
-
-// 3.2 Breadcrumb de Entidad (Jerarquía Semántica)
-const semantic = safeBundle.content?.semantic_hierarchy;
-if (semantic) {
-  const permalink = Astro.url.href;
-  const baseUrl = new URL(permalink).origin;
-  
-  const breadcrumbSchema = {
-    "@type": "BreadcrumbList",
-    "@id": `${permalink}#breadcrumb`,
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Inicio", "item": baseUrl },
-      { 
-        "@type": "ListItem", 
-        "position": 2, 
-        "name": safeBundle.locations?.[0]?.address?.locality || "Localidad", 
-        "item": `${baseUrl}/${(safeBundle.locations?.[0]?.address?.locality || "localidad").toLowerCase()}` 
-      },
-      { "@type": "ListItem", "position": 3, "name": semantic.category_name, "item": semantic.category_url },
-      { "@type": "ListItem", "position": 4, "name": safeBundle.brand?.name, "item": permalink }
-    ]
-  };
-
-  if (Array.isArray(safeSchema)) {
-    safeSchema.push(breadcrumbSchema);
-  } else if (safeSchema["@graph"]) {
-     safeSchema["@graph"].push(breadcrumbSchema);
-  }
-}
+const location = safeBundle.locations[0]; // Sede principal
 
 // --- OBSERVABILIDAD (Authority) ---
 const authorityScore = safeBundle.brand?.sameAs?.length || 0;
 console.log(`[OBSERVABILITY] 💎 SEO Divino: ${slug} | Autoridad: ${authorityScore} fuentes | Categoría: ${safeBundle.content?.semantic_hierarchy?.category_name || 'N/A'}`);
 
-// Validar estructura básica o location
-if (!safeBundle.locations || safeBundle.locations.length === 0) {
-    throw new Error(`[BUILD GATE] ❌ Bundle inválido: Sin locations definidas.`);
-}
-
 const location = safeBundle.locations[0]; // Sede principal
 
-// EJECUCIÓN DEL GATE: Validar antes de proceder
-validateSeoBundle(safeBundle);
-
-// 4. PREPARAR PROPS PARA EL LAYOUT (SEO)
-const seoProps = {
-  meta_title: safeBundle.seo?.defaultTitlePattern
-    ? safeBundle.seo.defaultTitlePattern
-        .replace('{page}', safeBundle.content?.home?.headline || 'Inicio')
-        .replace('{brand}', safeBundle.brand?.name || 'Marca')
-    : `${safeBundle.brand?.name} | Web Oficial`,
-  meta_description: safeBundle.seo?.defaultDescription || safeBundle.brand?.description,
-  canonical_path: slug, // O usar location.slug si está disponible
-  og_image: safeBundle.media?.ogImage || safeBundle.media?.hero
-};
-
-// 5. Cache-Control
-Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
-
-// 6. Extra Meta (Voice Snippet & RUM Control)
-const extraMeta = [];
-if (safeBundle.marketing?.voice_search_snippet) {
-  extraMeta.push({
-    name: "ai-voice-snippet",
-    content: safeBundle.marketing.voice_search_snippet
-  });
-}
-
-// Configuración de RUM desde el bundle (Ops)
+// 4. Configuración Ops
 const ops = safeBundle.ops || { rum: { enabled: true } };
 ---
 
-<Layout seo={seoProps} schema_jsonld={safeSchema} extra_meta={extraMeta} ops={ops}>
+<Layout bundle={safeBundle} ops={ops}>
   
   <main>
     {/* Breadcrumbs (Navegación + SEO Estructural) */}

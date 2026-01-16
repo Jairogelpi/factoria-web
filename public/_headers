@@ -1,16 +1,6 @@
-# Cacheo agresivo para assets estáticos (JS, CSS, Fuentes)
-# Inmutable = Nunca cambia (porque Astro pone hashes en los nombres)
-/_astro/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# Cacheo de fuentes y logos en public
-/fonts/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# Seguridad Extra (HSTS, No-Sniff, XSS Protection)
-# Esto te sube la nota de seguridad en auditorías SEO
 /*
   X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  X-XSS-Protection: 1; mode=block
   Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:;
