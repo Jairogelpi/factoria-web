@@ -116,6 +116,20 @@ if (safeBundle.marketing?.voice_search_snippet) {
           <li>{item}</li>
         ))}
       </ul>
+      
+      {/* Galería de Imágenes (SEO Premium: loading="lazy") */}
+      {(safeBundle.multimedia?.gallery || safeBundle.multimedia?.gallery_images || []).length > 0 && (
+        <div class="gallery-grid">
+          {(safeBundle.multimedia?.gallery || safeBundle.multimedia?.gallery_images || []).map((imgUrl: string, index: number) => (
+             <img 
+               src={imgUrl} 
+               alt={`Galería ${safeBundle.perfil?.nombre_comercial} - Foto ${index + 1}`}
+               loading="lazy"
+               class="gallery-img"
+             />
+          ))}
+        </div>
+      )}
     </section>
     
     {(safeBundle.social_proof?.badge_confianza || safeBundle.content?.trust_badges?.[0]) && (
@@ -219,5 +233,24 @@ if (safeBundle.marketing?.voice_search_snippet) {
 
   main {
     font-family: 'Inter', system-ui, sans-serif; /* Modern font stack */
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .gallery-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+  }
+
+  .gallery-img:hover {
+    transform: scale(1.02);
   }
 </style>
