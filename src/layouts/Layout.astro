@@ -7,8 +7,8 @@ type Seo = {
   og_image?: string;
 };
 
-// Props: Ahora aceptamos 'schema_jsonld' que puede ser objeto o array
-const { seo, schema_jsonld } = Astro.props;
+// Props: Ahora aceptamos 'schema_jsonld' y 'extra_meta'
+const { seo, schema_jsonld, extra_meta = [] } = Astro.props;
 
 const base = import.meta.env.PUBLIC_BASE_URL || "https://factoria-web.pages.dev";
 // Lógica de canonical (Correcta)
@@ -41,6 +41,10 @@ const ogImage = seo?.og_image
     {description && <meta property="og:description" content={description} />}
     <meta property="og:url" content={canonicalUrl} />
     {ogImage && <meta property="og:image" content={ogImage} />}
+
+    {extra_meta.map((meta: any) => (
+       <meta name={meta.name} content={meta.content} />
+    ))}
 
     {schema_jsonld && (
       <script type="application/ld+json" set:html={JSON.stringify(schema_jsonld)} />

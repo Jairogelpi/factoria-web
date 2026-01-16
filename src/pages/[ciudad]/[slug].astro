@@ -50,9 +50,18 @@ const seoProps = {
 
 // 5. Cache-Control (Vital para rendimiento en Edge)
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+
+// 6. Extra Meta (Voice Snippet God Mode)
+const extraMeta = [];
+if (bundle.marketing?.voice_search_snippet) {
+  extraMeta.push({
+    name: "ai-voice-snippet",
+    content: bundle.marketing.voice_search_snippet
+  });
+}
 ---
 
-<Layout seo={seoProps} schema_jsonld={schema}>
+<Layout seo={seoProps} schema_jsonld={schema} extra_meta={extraMeta}>
   
   <main>
     <header class="hero-section">
@@ -64,7 +73,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
       />
       
       <div class="hero-content">
-        <h1>{bundle.perfil.nombre_comercial}</h1>
+        {/* H1 SEO desde hero_copy o fallback al nombre */}
+        <h1>{bundle.marketing?.hero_copy?.h1_seo || bundle.perfil.nombre_comercial}</h1>
         <p>{bundle.perfil.descripcion_corta}</p>
         
         {/* Voice Search Snippet: Optimización para búsquedas por voz */}
