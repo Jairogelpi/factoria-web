@@ -1,0 +1,46 @@
+name: Factory Site Generator
+
+on:
+  repository_dispatch:
+    types: [create_site]
+
+jobs:
+  connect-cloudflare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 🌐 Vincular a Cloudflare Pages (Observabilidad Permanente)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          SLUG="${{ github.event.client_payload.business_slug }}"
+          REPO_NAME="sitio-$SLUG"
+          
+          echo "[OBS-FACTORY] 🌐 Solicitando a Cloudflare el despliegue de: $REPO_NAME"
+          
+          curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"name\": \"$REPO_NAME\",
+              \"production_branch\": \"main\",
+              \"source\": {
+                \"type\": \"github\",
+                \"config\": {
+                  \"owner\": \"jairogelpi\",
+                  \"repo_name\": \"$REPO_NAME\",
+                  \"production_branch\": \"main\",
+                  \"deploy_on_push\": true
+                }
+              },
+              \"build_config\": {
+                \"build_command\": \"npm run build\",
+                \"destination_dir\": \"dist\",
+                \"root_dir\": \"\"
+              }
+            }"
+          
+          echo "[OBS-FACTORY] ✅ Cloudflare ha recibido la orden. URL: https://$REPO_NAME.pages.dev"

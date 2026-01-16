@@ -63,7 +63,12 @@ export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): 
         ),
         parentOrganization: {
             '@id': `${siteUrl}/#organization`
-        }
+        },
+        aggregateRating: (bundle.social_proof?.rating && bundle.social_proof?.reviews_count) ? {
+            '@type': 'AggregateRating',
+            ratingValue: bundle.social_proof.rating,
+            reviewCount: bundle.social_proof.reviews_count
+        } : undefined
     };
 
     // 4. BreadcrumbList (Jerarquía)

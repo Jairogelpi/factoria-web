@@ -1,6 +1,16 @@
 import type { ClientSEOBundle } from "../../types/ClientBundle";
 
+// 5. Función de validación de texto ALT
+function validateAltText(bundle: ClientSEOBundle): { level: "error" | "warn"; msg: string }[] {
+    const issues: { level: "error" | "warn"; msg: string }[] = [];
+    if (!bundle.media?.hero?.alt || bundle.media.hero.alt.length < 10) {
+        issues.push({ level: "error", msg: "Hero image ALT text missing or too short (min 10 chars)" });
+    }
+    return issues;
+}
+
 export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
+    // ... existing start of function ...
     const missing: string[] = [];
 
     if (!bundle.brand?.name) missing.push("Nombre de marca (bundle.brand.name)");
@@ -44,8 +54,8 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
     // 5. Validación Estricta de ALT (Accesibilidad = Ranking)
     const altIssues = validateAltText(bundle);
     if (altIssues.length > 0) {
-        const errors = altIssues.filter(i => i.level === 'error').map(i => i.msg);
-        const warnings = altIssues.filter(i => i.level === 'warn').map(i => i.msg);
+        const errors = altIssues.filter((i: any) => i.level === 'error').map((i: any) => i.msg);
+        const warnings = altIssues.filter((i: any) => i.level === 'warn').map((i: any) => i.msg);
 
         if (errors.length > 0) {
             console.error(`[OBS-SEO-CRITICAL] ❌ Errores de ALT en ${bundle.ops.clientId}:\n${errors.join("\n")}`);
@@ -62,7 +72,13 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
     } else {
         console.log(`[OBS-SEO] ✅ SGE-Ready: ${Object.keys(bundle.content.semantic_definitions).length} respuestas directas generadas.`);
     }
-}
+
+    // 6. Validación de Estrellas (AggregateRating)
+    if (!bundle.social_proof?.rating || !bundle.social_proof?.reviews_count) {
+        console.warn(`[OBS-SEO] ⚠️ El bundle ${bundle.ops.clientId} no tiene valoraciones (social_proof). No saldrán estrellas en Google.`);
+    } else {
+        console.log(`[OBS-SEO] ⭐ AggregateRating activo: ${bundle.social_proof.rating}/5 (${bundle.social_proof.reviews_count} reseñas)`);
+    }
 }
 
 export function validateA11yHierarchy(bundle: any) {

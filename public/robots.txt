@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-
-# Bloqueamos partes internas si las hubiera
-Disallow: /admin/
-Disallow: /api/
-
-# IMPORTANTE: Apunta a tu nuevo sitemap dinámico
-Sitemap: https://factoria-web.pages.dev/sitemap.xml
