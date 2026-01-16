@@ -34,67 +34,70 @@ if (error || !data) {
 console.log(`[OBSERVABILITY] ⏱️ Renderizado SSR para: ${slug} | DB Latency: ${duration}ms`);
 // -----------------------------
 
-// 3. Extraer el Bundle (La nueva estructura v2.0)
-const bundle = data.seo_bundle; // Tu Golden Record
-const schema = data.schema_json_ld; // Tu Grafo perfecto
+// 3. Extraer el Bundle (La nueva estructura v2.0 con fallback a v1)
+const bundle = data.seo_bundle; 
+const schema = data.schema_json_ld;
+
+// Parseamos si viene como string (Supabase a veces devuelve string en JSONB si no se fuerza)
+const safeBundle = typeof bundle === 'string' ? JSON.parse(bundle) : bundle;
+const safeSchema = typeof schema === 'string' ? JSON.parse(schema) : schema;
 
 // 4. PREPARAR PROPS PARA EL LAYOUT (SEO)
 // Mapeamos tu JSON complejo a las props simples que espera el Layout
 const seoProps = {
-  meta_title: `${bundle.perfil.nombre_comercial} en ${bundle.ubicacion.ciudad} | Web Oficial`,
-  meta_description: bundle.perfil.descripcion_corta,
-  // Usamos el slug real para que coincida con el @id del Schema
-  canonical_path: `${bundle.ubicacion.ciudad}/${slug}`, 
-  og_image: bundle.multimedia.hero_image_url
+  meta_title: safeBundle.meta?.title || `${safeBundle.perfil?.nombre_comercial} | Web Oficial`,
+  meta_description: safeBundle.meta?.description || safeBundle.perfil?.descripcion_corta,
+  canonical_path: safeBundle.meta?.canonical || `${safeBundle.ubicacion?.ciudad || 'caceres'}/${slug}`,
+  og_image: safeBundle.multimedia?.hero_image_url || safeBundle.multimedia?.hero
 };
 
-// 5. Cache-Control (Vital para rendimiento en Edge)
+// 5. Cache-Control
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
 
 // 6. Extra Meta (Voice Snippet God Mode)
 const extraMeta = [];
-if (bundle.marketing?.voice_search_snippet) {
+if (safeBundle.marketing?.voice_search_snippet) {
   extraMeta.push({
     name: "ai-voice-snippet",
-    content: bundle.marketing.voice_search_snippet
+    content: safeBundle.marketing.voice_search_snippet
   });
 }
 ---
 
-<Layout seo={seoProps} schema_jsonld={schema} extra_meta={extraMeta}>
+<Layout seo={seoProps} schema_jsonld={safeSchema} extra_meta={extraMeta}>
   
   <main>
     <header class="hero-section">
       <img 
-        src={bundle.multimedia.hero_image_url} 
-        alt={bundle.multimedia.hero_image_alt_seo || `Foto principal de ${bundle.perfil.nombre_comercial}`}
+        src={safeBundle.multimedia?.hero_image_url || safeBundle.multimedia?.hero} 
+        alt={safeBundle.multimedia?.hero_image_alt_seo || `Foto principal de ${safeBundle.perfil?.nombre_comercial || safeBundle.content?.h1}`}
         class="hero-bg"
         fetchpriority="high" 
       />
       
       <div class="hero-content">
-        {/* H1 SEO desde hero_copy o fallback al nombre */}
-        <h1>{bundle.marketing?.hero_copy?.h1_seo || bundle.perfil.nombre_comercial}</h1>
-        <p>{bundle.perfil.descripcion_corta}</p>
+        {/* H1: Soporte para estructura v2 (marketing) y v1 (content.h1) */}
+        <h1>{safeBundle.marketing?.hero_copy?.h1_seo || safeBundle.content?.h1 || safeBundle.perfil?.nombre_comercial}</h1>
+        <p>{safeBundle.perfil?.descripcion_corta || safeBundle.content?.subtitle}</p>
         
-        {/* Voice Search Snippet: Optimización para búsquedas por voz */}
-        {bundle.marketing?.voice_search_snippet && (
-          <p class="voice-snippet">{bundle.marketing.voice_search_snippet}</p>
+        {/* Voice Search Snippet */}
+        {safeBundle.marketing?.voice_search_snippet && (
+          <p class="voice-snippet">{safeBundle.marketing.voice_search_snippet}</p>
         )}
 
-        {/* CTA "God Mode" con Microcopy */}
-        {(bundle.marketing?.estrategia_conversion?.cta_principal?.url || bundle.contacto.reserva_url) && (
+        {/* CTA: Soporte híbrido v1/v2 */}
+        {(safeBundle.marketing?.estrategia_conversion?.cta_principal?.url || safeBundle.contacto?.reserva_url || safeBundle.content?.cta_primary?.url) && (
             <div class="cta-container">
               <a 
-                href={bundle.marketing?.estrategia_conversion?.cta_principal?.url || bundle.contacto.reserva_url} 
+                href={safeBundle.marketing?.estrategia_conversion?.cta_principal?.url || safeBundle.contacto?.reserva_url || safeBundle.content?.cta_primary?.url} 
                 class="btn-primary"
               >
-                {bundle.marketing?.estrategia_conversion?.cta_principal?.texto || "Reservar / Pedir"}
+                {safeBundle.marketing?.estrategia_conversion?.cta_principal?.texto || "Reservar / Pedir"}
               </a>
               
-              {(bundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Compra segura 🔒") && (
+              {(safeBundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Compra segura 🔒") && (
                   <span class="microcopy-seguridad">
-                    🔒 {bundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Garantía de Satisfacción"}
+                    🔒 {safeBundle.marketing?.estrategia_conversion?.microcopy_seguridad || "Garantía de Satisfacción"}
                   </span>
               )}
             </div>
@@ -104,18 +107,19 @@ if (bundle.marketing?.voice_search_snippet) {
 
     <section>
       <h2>Sobre Nosotros</h2>
-      <p>{bundle.perfil.descripcion_larga}</p>
+      <p>{safeBundle.perfil?.descripcion_larga || safeBundle.content?.about_text}</p>
       
       <h3>Nuestra Oferta</h3>
       <ul>
-        {(bundle.contenido_seo.lista_servicios || []).map((item: string) => (
+        {/* Soporte para lista de servicios en distintas ubicaciones */}
+        {(safeBundle.contenido_seo?.lista_servicios || safeBundle.content?.servicios || []).map((item: string) => (
           <li>{item}</li>
         ))}
       </ul>
     </section>
     
-    {bundle.social_proof.badge_confianza && (
-        <div class="badge">🏆 {bundle.social_proof.badge_confianza}</div>
+    {(safeBundle.social_proof?.badge_confianza || safeBundle.content?.trust_badges?.[0]) && (
+        <div class="badge">🏆 {safeBundle.social_proof?.badge_confianza || safeBundle.content?.trust_badges?.[0]}</div>
     )}
 
   </main>
