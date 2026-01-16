@@ -27,9 +27,16 @@ export async function GET({ request }: { request: Request }) {
   ${slugs.map((site) => {
         // Usamos la fecha de actualización real o la actual
         const lastMod = site.updated_at ? new Date(site.updated_at).toISOString() : new Date().toISOString();
+
+        // Parsing seguro del bundle
+        let bundle = site.seo_bundle;
+        if (typeof bundle === 'string') {
+            try { bundle = JSON.parse(bundle); } catch (e) { bundle = {}; }
+        }
+
         // Extraemos ciudad para la URL (si la guardas en seo_bundle)
-        const ciudad = site.seo_bundle?.ubicacion?.ciudad || 'caceres'; // Fallback
-        const loc = `${baseUrl}/${ciudad.toLowerCase()}/${site.business_slug}`;
+        const ciudad = bundle?.ubicacion?.ciudad || bundle?.content?.city || 'caceres'; // Fallback robusto
+        const loc = `${baseUrl}/${ciudad.toLowerCase().replace(/\s+/g, '-')}/${site.business_slug}`;
 
         return `
   <url>

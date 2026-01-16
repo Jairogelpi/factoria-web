@@ -8,7 +8,7 @@ type Seo = {
 };
 
 // Props: Ahora aceptamos 'schema_jsonld' y 'extra_meta'
-const { seo, schema_jsonld, extra_meta = [] } = Astro.props;
+const { seo, schema_jsonld, extra_meta = [], ops = { rum: { enabled: true } } } = Astro.props;
 
 const base = import.meta.env.PUBLIC_BASE_URL || "https://factoria-web.pages.dev";
 // Lógica de canonical (Correcta)
@@ -55,6 +55,67 @@ const ogImage = seo?.og_image
     {schema_jsonld && (
       <script type="application/ld+json" set:html={JSON.stringify(schema_jsonld)} />
     )}
+    {ops.rum?.enabled && (
+      <script is:inline>
+        // Función para enviar métricas a tu sistema o analítica
+        const sendToAnalytics = ({ name, value, id }) => {
+          const body = JSON.stringify({ name, value, id, url: window.location.href });
+          // Usamos sendBeacon para no bloquear la descarga de la página
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/metrics', body);
+          } else {
+            fetch('/api/metrics', { body, method: 'POST', keepalive: true });
+          }
+          console.log(`[RUM] 📊 ${name}: ${value}`);
+        };
+
+        // Observador de métricas Core Web Vitals
+        if ('PerformanceObserver' in window) {
+          try {
+            const po = new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                // Filtramos por métricas críticas de 2026 (LCP, CLS, INP)
+                if (['largest-contentful-paint', 'layout-shift', 'first-input'].includes(entry.entryType)) {
+                   sendToAnalytics({
+                     name: entry.entryType,
+                     value: entry.startTime || entry.value,
+                     id: entry.name
+                   });
+                }
+              }
+            });
+            po.observe({ type: 'largest-contentful-paint', buffered: true });
+            po.observe({ type: 'layout-shift', buffered: true });
+            po.observe({ type: 'first-input', buffered: true });
+          } catch (e) {
+            console.error('[RUM] Error initializing observer:', e);
+          }
+        }
+      </script>
+    )}
+
+    <script type="speculationrules">
+    {
+      "prerender": [
+        {
+          "source": "list",
+          "urls": ["/"],
+          "score": 0.5
+        },
+        {
+          "where": { "href_matches": "/*" },
+          "eagerness": "moderate"
+        }
+      ]
+    }
+    </script>
+    
+    <script>
+      // Observabilidad de Speculation Rules
+      if (HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules')) {
+        console.log('[OBSERVABILITY] 🚀 Speculation Rules activas (0ms loading ready)');
+      }
+    </script>
   </head>
   <body>
     <slot />
