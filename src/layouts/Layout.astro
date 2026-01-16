@@ -1,14 +1,17 @@
 ---
+// Layout.astro
 type Seo = {
   meta_title?: string;
   meta_description?: string;
-  canonical_path?: string; // "caceres/cozy-hair-salon"
-  og_image?: string;       // URL absoluta o path
+  canonical_path?: string;
+  og_image?: string;
 };
 
-const { seo, schema_jsonld = [] } = Astro.props;
+// Props: Ahora aceptamos 'schema_jsonld' que puede ser objeto o array
+const { seo, schema_jsonld } = Astro.props;
 
-const base = import.meta.env.PUBLIC_BASE_URL || "https://example.com";
+const base = import.meta.env.PUBLIC_BASE_URL || "https://factoria-web.pages.dev";
+// Lógica de canonical (Correcta)
 const canonicalPath = (seo?.canonical_path || "").replace(/^\//, "");
 const canonicalUrl = canonicalPath
   ? `${base.replace(/\/$/, "")}/${canonicalPath}`
@@ -17,6 +20,7 @@ const canonicalUrl = canonicalPath
 const title = seo?.meta_title || "";
 const description = seo?.meta_description || "";
 
+// Lógica de OG Image (Correcta)
 const ogImage = seo?.og_image
   ? (seo.og_image.startsWith("http") ? seo.og_image : `${base.replace(/\/$/, "")}/${seo.og_image.replace(/^\//, "")}`)
   : "";
@@ -26,6 +30,7 @@ const ogImage = seo?.og_image
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    
     {title && <title>{title}</title>}
     {description && <meta name="description" content={description} />}
 
@@ -37,10 +42,8 @@ const ogImage = seo?.og_image
     <meta property="og:url" content={canonicalUrl} />
     {ogImage && <meta property="og:image" content={ogImage} />}
 
-    {schema_jsonld?.length > 0 && (
-      <script type="application/ld+json">
-        {JSON.stringify(schema_jsonld, null, 0)}
-      </script>
+    {schema_jsonld && (
+      <script type="application/ld+json" set:html={JSON.stringify(schema_jsonld)} />
     )}
   </head>
   <body>

@@ -1,7 +1,8 @@
 ---
+import Layout from '../../layouts/Layout.astro'; // Asegúrate de importar tu Layout
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Configuración del Cliente Supabase (Usando vars de entorno)
+// 1. Configuración Cliente Supabase
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -9,19 +10,18 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const { slug } = Astro.params;
 
 // --- OBSERVABILIDAD (Start) ---
-// Medimos cuánto tarda Supabase en responder para asegurar que no daña el SEO
 const startMetric = performance.now();
 let metricStatus = 'success';
-// -----------------------------
 
 // 2. Consulta a la Fuente de la Verdad
+// NOTA: Asegúrate de que en Supabase tienes estas columnas o que el JSON las incluye.
+// Si guardaste todo en 'seo_bundle', ajusta la desestructuración abajo.
 const { data, error } = await supabase
   .from('sites_factory')
-  .select('seo_bundle')
+  .select('seo_bundle, schema_json_ld') // Pedimos Datos + Schema
   .eq('business_slug', slug)
   .single();
 
-// --- OBSERVABILIDAD (End) ---
 const endMetric = performance.now();
 const duration = (endMetric - startMetric).toFixed(2);
 
@@ -31,26 +31,54 @@ if (error || !data) {
     return Astro.redirect('/404');
 }
 
-console.log(`[OBSERVABILITY] ⏱️ Renderizado SSR para: ${slug} | DB Latency: ${duration}ms | Status: ${metricStatus}`);
+console.log(`[OBSERVABILITY] ⏱️ Renderizado SSR para: ${slug} | DB Latency: ${duration}ms`);
 // -----------------------------
 
-// 3. Extraer el Bundle para usar en el HTML
-const bundle = data.seo_bundle;
-const { content, meta } = bundle;
+// 3. Extraer el Bundle (La nueva estructura v2.0)
+const bundle = data.seo_bundle; // Tu Golden Record
+const schema = data.schema_json_ld; // Tu Grafo perfecto
 
-// 4. Cache-Control para SEO (Importante)
-// Le decimos al navegador/Google que guarde esta versión 60 segundos.
-// Esto hace que la web vuele si entra mucha gente seguida.
+// 4. PREPARAR PROPS PARA EL LAYOUT (SEO)
+// Mapeamos tu JSON complejo a las props simples que espera el Layout
+const seoProps = {
+  meta_title: `${bundle.perfil.nombre_comercial} en ${bundle.ubicacion.ciudad} | Web Oficial`,
+  meta_description: bundle.perfil.descripcion_corta,
+  // Usamos el slug real para que coincida con el @id del Schema
+  canonical_path: `${bundle.ubicacion.ciudad}/${slug}`, 
+  og_image: bundle.multimedia.hero_image_url
+};
+
+// 5. Cache-Control (Vital para rendimiento en Edge)
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60');
 ---
 
-<html lang="es">
-  <head>
-    <title>{meta.title}</title>
-    <meta name="description" content={meta.description} />
-    </head>
-  <body>
-    <h1>{content.h1}</h1>
-    <p>{content.about_text}</p>
-    </body>
-</html>
+<Layout seo={seoProps} schema_jsonld={schema}>
+  
+  <main>
+    <header style={`background-image: url('${bundle.multimedia.hero_image_url}')`}>
+      <h1>{bundle.perfil.nombre_comercial}</h1>
+      <p>{bundle.perfil.descripcion_corta}</p>
+      
+      {bundle.contacto.reserva_url && (
+         <a href={bundle.contacto.reserva_url} class="btn-cta">Reservar / Pedir</a>
+      )}
+    </header>
+
+    <section>
+      <h2>Sobre Nosotros</h2>
+      <p>{bundle.perfil.descripcion_larga}</p>
+      
+      <h3>Nuestra Oferta</h3>
+      <ul>
+        {(bundle.contenido_seo.lista_servicios || []).map((item) => (
+          <li>{item}</li>
+        ))}
+      </ul>
+    </section>
+    
+    {bundle.social_proof.badge_confianza && (
+        <div class="badge">🏆 {bundle.social_proof.badge_confianza}</div>
+    )}
+
+  </main>
+</Layout>
