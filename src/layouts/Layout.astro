@@ -3,6 +3,8 @@
 import SEO from '../components/SEO.astro';
 import ConsentAndTags from '../components/ConsentAndTags.astro';
 import CookieBanner from '../components/CookieBanner.astro';
+import RumVitals from '../components/RumVitals.astro';
+import { getRelatedSites } from '../lib/db/queries';
 import type { ClientSEOBundle } from '../types/ClientBundle';
 
 interface Props {
@@ -19,6 +21,26 @@ const includeBanner = typeof bundle?.legal?.includeCookieBanner === 'boolean'
   ? bundle.legal.includeCookieBanner
   : true; // Default true si no está explícitamente desactivado
 
+// Semantic Clustering: Enlaces Relacionados
+const locality = bundle?.locations?.[0]?.address?.locality ?? "";
+const categoryName = bundle?.content?.semantic_hierarchy?.category_name ?? "";
+let relatedSites: any[] = [];
+
+// Solo hacemos fetch si estamos en un entorno donde podemos (no en prerender estático puro si no hay DB)
+// Para SSR funciona perfecto.
+if (locality || categoryName) {
+  try {
+     relatedSites = await getRelatedSites({
+       excludeSlug: slug,
+       locality,
+       categoryName,
+       limit: 6
+     });
+  } catch (e) {
+     console.error('[CLUSTERING] Fallo obteniendo relacionados', e);
+  }
+}
+
 // --- OBSERVABILIDAD DE SEGURIDAD ---
 // ... (resto del código estático)
 // Verifica si estamos sirviendo con headers seguros (Nota: En local/dev puede fallar, es esperado)
@@ -32,6 +54,7 @@ if (!securityCheck && import.meta.env.PROD) {
 
 <html lang="es">
   <head>
+    <meta name="google-site-verification" content="q82RojrbE856-ZZz7KqdPwmBrRpL1eVByR_5o00FfL0" />
     <!-- Componente Maestro: Cerebro SEO -->
     <SEO bundle={bundle} />
 
@@ -106,5 +129,23 @@ if (!securityCheck && import.meta.env.PROD) {
       businessSlug={slug}
       policyUrl={`/legal/${slug}/cookies`}
     />
+
+    {relatedSites.length > 0 && (
+      <aside class="related-sites-container">
+        <div class="related-content">
+            <h2>Negocios relacionados en {locality}</h2>
+            <ul class="related-links">
+            {relatedSites.map((r) => (
+                <li>
+                <a href={`/${r.slug}`}>{r.name}</a>
+                {r.category ? <span class="related-cat"> · {r.category}</span> : null}
+                </li>
+            ))}
+            </ul>
+        </div>
+      </aside>
+    )}
+
+    <RumVitals slug={slug} enabled={ops.rum.enabled} sampleRate={ops.rum.sampleRate} />
   </body>
 </html>

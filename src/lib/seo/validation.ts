@@ -38,8 +38,22 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
         const msg = `[BUILD GATE] ❌ Error en site '${clientId}': Faltan [${missing.join(", ")}]`;
         console.error(msg);
         if (env === "prod") throw new Error(msg);
-    } else {
         console.log(`[OBSERVABILITY] ✅ Bundle validado para: ${bundle.brand.name}`);
+    }
+
+    // 5. Validación Estricta de ALT (Accesibilidad = Ranking)
+    const altIssues = validateAltText(bundle);
+    if (altIssues.length > 0) {
+        const errors = altIssues.filter(i => i.level === 'error').map(i => i.msg);
+        const warnings = altIssues.filter(i => i.level === 'warn').map(i => i.msg);
+
+        if (errors.length > 0) {
+            console.error(`[OBS-SEO-CRITICAL] ❌ Errores de ALT en ${bundle.ops.clientId}:\n${errors.join("\n")}`);
+            if (env === 'prod') throw new Error(`Build Gate: Fallo crítico de ALT Text: ${errors[0]}`);
+        }
+        if (warnings.length > 0) {
+            console.warn(`[OBS-SEO] ⚠️ Advertencias de ALT en ${bundle.ops.clientId}:\n${warnings.join("\n")}`);
+        }
     }
 
     // 5. Validación de densidad de respuestas SGE (Observabilidad Permanente)

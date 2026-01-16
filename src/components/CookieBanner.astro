@@ -47,12 +47,15 @@ if (includeBanner) {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            type: 'event',
+            // kind: 'event' para distinguir de web-vitals
+            kind: 'event',
+            type: 'event', // fallback legacy
             name,
             value,
             slug,
             url: location.href,
             user_agent: navigator.userAgent
+            // metric_id se generará en backend
           })
         });
       } catch (e) {

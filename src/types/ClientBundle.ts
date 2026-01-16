@@ -18,6 +18,8 @@ export interface ClientSEOBundle {
         rum: { enabled: boolean; sampleRate: number };
         alertingTargets?: string[];
         indexNowKey?: string;
+        // NUEVO: E-E-A-T (Author ID determinista)
+        authorId?: string;
     };
     brand: {
         name: string;
@@ -62,6 +64,16 @@ export interface ClientSEOBundle {
         defaultTitlePattern: string;
         defaultDescription: string;
         robots: "index, follow" | "noindex, nofollow";
+
+        // OPCIONAL (E-E-A-T): Perfil de autor específico por cliente
+        author?: {
+            id: string;          // "jairo-gelpi" (kebab)
+            name: string;        // nombre visible
+            jobTitle?: string;   // "Consultor SEO / Data"
+            url?: string;        // URL canónica del autor
+            image?: string;      // avatar
+            sameAs?: string[];   // linkedin, etc.
+        };
     };
 
     content: {

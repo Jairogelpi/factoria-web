@@ -1,4 +1,4 @@
-import type { Graph, WebSite, Organization, LocalBusiness, BreadcrumbList, Thing, Service } from 'schema-dts';
+import type { Graph, WebSite, Organization, LocalBusiness, BreadcrumbList, Thing, Service, Person, WebPage, FAQPage } from 'schema-dts';
 import type { ClientSEOBundle } from '../../types/ClientBundle';
 
 export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): Graph {
@@ -122,6 +122,70 @@ export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): 
         }
     }));
 
+    // 6. E-E-A-T: Person & WebPage
+    const authorId = bundle.ops?.authorId || "factoria-web-editor";
+    const personNodeId = `${siteUrl}/#person-${authorId}`;
+
+    const person: Person = {
+        '@type': 'Person',
+        '@id': personNodeId,
+        name: bundle.seo.author?.name || "Equipo Editorial",
+        jobTitle: bundle.seo.author?.jobTitle || "Validación y curación de datos",
+        url: bundle.seo.author?.url || siteUrl,
+        image: bundle.seo.author?.image,
+        sameAs: bundle.seo.author?.sameAs,
+        worksFor: {
+            '@id': `${siteUrl}/#organization`
+        }
+    };
+
+    const webPage: WebPage = {
+        '@type': 'WebPage',
+        '@id': `${permalink}#webpage`,
+        url: permalink,
+        name: bundle.seo.siteName,
+        isPartOf: {
+            '@id': `${siteUrl}/#website`
+        },
+        about: {
+            '@id': `${permalink}#localbusiness`
+        },
+        author: {
+            '@id': personNodeId
+        },
+        reviewedBy: {
+            '@id': personNodeId
+        }
+    };
+
+
+    // 7. FAQPage
+    const faqNode: FAQPage | null = (() => {
+        const faqs = bundle?.content?.faq;
+        if (!Array.isArray(faqs) || faqs.length < 3) return null;
+
+        const mainEntity = faqs
+            .filter((x: any) => x && typeof x.q === "string" && typeof x.a === "string")
+            .map((x: any) => ({
+                "@type": "Question",
+                "name": x.q.trim(),
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": x.a.trim()
+                }
+            }))
+            .filter((x: any) => x.name && x.acceptedAnswer.text);
+
+        if (mainEntity.length < 3) return null;
+
+        return {
+            "@type": "FAQPage",
+            "@id": `${siteUrl}/#faqpage`,
+            "url": permalink,
+            "mainEntity": mainEntity as any // schema-dts puede ser estricto con Question[]
+        };
+    })();
+
     // 6. Construcción del Grafo Unificado
     return {
         '@context': 'https://schema.org',
@@ -130,6 +194,9 @@ export function generateSchemaGraph(bundle: ClientSEOBundle, pathname: string): 
             organization,
             localBusiness,
             breadcrumb,
+            person,
+            webPage,
+            ...(faqNode ? [faqNode] : []),
             ...services
         ]
     };

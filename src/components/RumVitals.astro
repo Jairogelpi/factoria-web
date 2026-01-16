@@ -1,0 +1,52 @@
+---
+interface Props {
+  slug: string;
+  enabled: boolean;
+  sampleRate?: number;
+}
+
+const { slug, enabled, sampleRate = 1 } = Astro.props;
+---
+
+{enabled && (
+  <script type="module" define:vars={{ slug, sampleRate }}>
+    import { onCLS, onINP, onLCP, onTTFB, onFCP } from 'https://unpkg.com/web-vitals@4?module';
+
+    const shouldSample = Math.random() < Math.max(0, Math.min(1, sampleRate));
+
+    if (shouldSample) {
+      const send = async (kind, metric) => {
+        try {
+          // Usamos navigator.sendBeacon para mayor fiabilidad en unload, si es texto plano,
+          // pero metrics API espera JSON. Fetch keepalive es la opción moderna.
+          await fetch('/api/metrics', {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              kind,                       // "load" | "interaction"
+              name: metric.name,          // "INP" | "LCP" | ...
+              value: metric.value,        // number
+              metric_id: metric.id,       // id del web-vitals
+              slug,
+              url: location.href,
+              user_agent: navigator.userAgent
+            })
+          });
+        } catch (e) {
+          // Observabilidad no debe romper UX
+          console.debug('[RUM] Send failed', e);
+        }
+      };
+
+      // LOAD
+      onLCP((m) => send('load', m));
+      onCLS((m) => send('load', m));
+      onTTFB((m) => send('load', m));
+      onFCP((m) => send('load', m));
+
+      // INTERACTION (INP - Vital para 2026)
+      onINP((m) => send('interaction', m));
+    }
+  </script>
+)}
