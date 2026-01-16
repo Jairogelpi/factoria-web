@@ -74,10 +74,15 @@ export function validateBundleStrict(bundle: ClientSEOBundle, env: string) {
     }
 
     // 6. Validación de Estrellas (AggregateRating)
-    if (!bundle.social_proof?.rating || !bundle.social_proof?.reviews_count) {
-        console.warn(`[OBS-SEO] ⚠️ El bundle ${bundle.ops.clientId} no tiene valoraciones (social_proof). No saldrán estrellas en Google.`);
+    const hasLocationRating = bundle.locations?.[0]?.rating?.value && bundle.locations?.[0]?.rating?.count;
+    const hasSocialProof = bundle.social_proof?.rating && bundle.social_proof?.reviews_count;
+
+    if (!hasLocationRating && !hasSocialProof) {
+        console.warn(`[OBS-SEO] ⚠️ El bundle ${bundle.ops.clientId} no tiene valoraciones (ni en location ni en social_proof). No saldrán estrellas en Google.`);
     } else {
-        console.log(`[OBS-SEO] ⭐ AggregateRating activo: ${bundle.social_proof.rating}/5 (${bundle.social_proof.reviews_count} reseñas)`);
+        const rating = bundle.locations?.[0]?.rating?.value || bundle.social_proof?.rating;
+        const count = bundle.locations?.[0]?.rating?.count || bundle.social_proof?.reviews_count;
+        console.log(`[OBS-SEO] ⭐ AggregateRating activo: ${rating}/5 (${count} reseñas)`);
     }
 }
 

@@ -1,28 +1,48 @@
-name: Factory Site Generator
-
+name: 🚀 Fábrica SEO 100% Automática
 on:
   repository_dispatch:
-    types: [create_site]
+    types: [deploy_new_site]
 
 jobs:
-  connect-cloudflare:
+  fabricar:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Clonar Plantilla
         uses: actions/checkout@v4
 
-      - name: 🌐 Vincular a Cloudflare Pages (Observabilidad Permanente)
+      - name: 🛠️ Inyectar Bundle y Validar (Observabilidad)
+        run: |
+          echo "[OBS-FACTORY] 📝 Recibiendo datos para: ${{ github.event.client_payload.business_slug }}"
+          mkdir -p src/data
+          echo '${{ github.event.client_payload.seo_bundle }}' > src/data/current_bundle.json
+          npm install
+          echo "[OBS-FACTORY] 🔍 Validando SEO técnico..."
+          npm run validate # Esto corre tu script gate.mjs
+          
+      - name: 🏗️ Crear Repositorio Único
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           SLUG="${{ github.event.client_payload.business_slug }}"
           REPO_NAME="sitio-$SLUG"
-          
-          echo "[OBS-FACTORY] 🌐 Solicitando a Cloudflare el despliegue de: $REPO_NAME"
-          
-          curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+          rm -rf .git
+          git init -b main
+          git config user.name "Factoria-Bot"
+          git config user.email "bot@factoria-web.com"
+          git add .
+          git commit -m "Initial commit for $SLUG - SEO 2026 Ready"
+          gh repo create "$REPO_NAME" --public --source=. --remote=upstream --push
+          echo "[OBS-FACTORY] ✅ Repositorio creado: jairogelpi/$REPO_NAME"
+
+      - name: 🌐 Conectar a Cloudflare Pages
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          SLUG="${{ github.event.client_payload.business_slug }}"
+          REPO_NAME="sitio-$SLUG"
+          curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects" \
+            -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
               \"name\": \"$REPO_NAME\",
@@ -37,10 +57,9 @@ jobs:
                 }
               },
               \"build_config\": {
-                \"build_command\": \"npm run build\",
+                \"build_command\": \"npm install && npm run build\",
                 \"destination_dir\": \"dist\",
                 \"root_dir\": \"\"
               }
             }"
-          
-          echo "[OBS-FACTORY] ✅ Cloudflare ha recibido la orden. URL: https://$REPO_NAME.pages.dev"
+          echo "[OBS-FACTORY] 🚀 Web enviada a Cloudflare: https://$REPO_NAME.pages.dev"

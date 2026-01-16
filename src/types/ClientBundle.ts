@@ -54,6 +54,9 @@ export interface ClientSEOBundle {
         }>;
 
         gbp?: { placeId: string; mapsUrl: string; cid?: string; };
+
+        // SEO: AggregateReview support per location
+        rating?: { value: number; count: number; };
     }>;
 
     // Configuración SEO técnica (Restaurado)

@@ -13,6 +13,7 @@
     "test:a11y": "playwright test tests/a11y.spec.ts",
     "test:perf": "node tests/perf.lighthouse.cjs",
     "gate": "node scripts/gate.mjs",
+    "validate": "npm run gate",
     "deploy:check": "npm run gate"
   },
   "dependencies": {
