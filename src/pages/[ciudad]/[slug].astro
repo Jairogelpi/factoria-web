@@ -67,12 +67,24 @@ if (safeBundle.marketing?.voice_search_snippet) {
 <Layout seo={seoProps} schema_jsonld={safeSchema} extra_meta={extraMeta}>
   
   <main>
+    {/* Breadcrumbs (Navegación + SEO Estructural) */}
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+      <ol>
+         <li><a href="/">Inicio</a></li>
+         <li aria-hidden="true">&rsaquo;</li>
+         <li><a href={`/${safeBundle.ubicacion?.ciudad || 'caceres'}`}>{safeBundle.ubicacion?.ciudad || 'Ciudad'}</a></li>
+         <li aria-hidden="true">&rsaquo;</li>
+         <li><span aria-current="page">{safeBundle.perfil?.nombre_comercial || 'Negocio'}</span></li>
+      </ol>
+    </nav>
+
     <header class="hero-section">
       <img 
         src={safeBundle.multimedia?.hero_image_url || safeBundle.multimedia?.hero} 
         alt={safeBundle.multimedia?.hero_image_alt_seo || `Foto principal de ${safeBundle.perfil?.nombre_comercial || safeBundle.content?.h1}`}
         class="hero-bg"
-        fetchpriority="high" 
+        fetchpriority="high"
+        width="1200" height="600" 
       />
       
       <div class="hero-content">
@@ -126,11 +138,27 @@ if (safeBundle.marketing?.voice_search_snippet) {
                alt={`Galería ${safeBundle.perfil?.nombre_comercial} - Foto ${index + 1}`}
                loading="lazy"
                class="gallery-img"
+               width="400" height="300"
              />
           ))}
         </div>
       )}
     </section>
+
+    {/* Sección FAQs (SEO Semántico visual) */}
+    {(safeBundle.contenido_seo?.faqs || safeBundle.content?.faqs || []).length > 0 && (
+      <section class="faqs-section">
+        <h3>Preguntas Frecuentes</h3>
+        <dl>
+          {(safeBundle.contenido_seo?.faqs || safeBundle.content?.faqs || []).map((faq: any) => (
+            <>
+              <dt>{faq.question || faq.name}</dt>
+              <dd>{faq.answer || faq.acceptedAnswer?.text}</dd>
+            </>
+          ))}
+        </dl>
+      </section>
+    )}
     
     {(safeBundle.social_proof?.badge_confianza || safeBundle.content?.trust_badges?.[0]) && (
         <div class="badge">🏆 {safeBundle.social_proof?.badge_confianza || safeBundle.content?.trust_badges?.[0]}</div>
@@ -252,5 +280,51 @@ if (safeBundle.marketing?.voice_search_snippet) {
 
   .gallery-img:hover {
     transform: scale(1.02);
+  }
+  
+  /* Breadcrumbs */
+  .breadcrumbs ol {
+    display: flex;
+    list-style: none;
+    padding: 1rem 2rem;
+    font-size: 0.9rem;
+    color: #666;
+    background: #f9f9f9;
+  }
+  .breadcrumbs a {
+    color: #444;
+    text-decoration: none;
+  }
+  .breadcrumbs a:hover {
+    text-decoration: underline;
+  }
+  
+  /* FAQs */
+  .faqs-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+  }
+  dt {
+    font-weight: bold;
+    margin-top: 1rem;
+    color: #333;
+  }
+  dd {
+    margin-left: 0;
+    margin-bottom: 1rem;
+    color: #555;
+  }
+  
+  /* CLS Prevention */
+  img {
+    max-width: 100%;
+    height: auto;
+    /* Aspect-ratio hints (can be overridden by inline styles) */
+    aspect-ratio: attr(width) / attr(height); 
+  }
+  .hero-bg {
+    /* Hardcoded hero aspect ratio fallback */
+    aspect-ratio: 16/9; 
   }
 </style>

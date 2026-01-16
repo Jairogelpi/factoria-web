@@ -42,6 +42,12 @@ const ogImage = seo?.og_image
     <meta property="og:url" content={canonicalUrl} />
     {ogImage && <meta property="og:image" content={ogImage} />}
 
+    <!-- Twitter Card (SEO Técnico) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    {title && <meta name="twitter:title" content={title} />}
+    {description && <meta name="twitter:description" content={description} />}
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
     {extra_meta.map((meta: any) => (
        <meta name={meta.name} content={meta.content} />
     ))}
